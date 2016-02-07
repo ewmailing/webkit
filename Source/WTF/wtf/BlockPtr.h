@@ -81,7 +81,10 @@ public:
         return *this;
     }
 
-    R operator()(Args&&... arguments) const
+    explicit operator bool() const { return m_block; }
+    bool operator!() const { return !m_block; }
+
+    R operator()(Args... arguments) const
     {
         ASSERT(m_block);
         

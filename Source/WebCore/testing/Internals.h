@@ -171,13 +171,14 @@ public:
 
     void setPagination(const String& mode, int gap, ExceptionCode& ec) { setPagination(mode, gap, 0, ec); }
     void setPagination(const String& mode, int gap, int pageLength, ExceptionCode&);
+    void setPaginationLineGridEnabled(bool, ExceptionCode&);
     String configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
 
     bool wasLastChangeUserEdit(Element* textField, ExceptionCode&);
     bool elementShouldAutoComplete(Element* inputElement, ExceptionCode&);
     void setEditingValue(Element* inputElement, const String&, ExceptionCode&);
     void setAutofilled(Element*, bool enabled, ExceptionCode&);
-    void setShowAutoFillButton(Element*, bool enabled, ExceptionCode&);
+    void setShowAutoFillButton(Element*, const String& autoFillButtonType, ExceptionCode&);
     void scrollElementToRect(Element*, long x, long y, long w, long h, ExceptionCode&);
 
     void paintControlTints(ExceptionCode&);
@@ -219,6 +220,8 @@ public:
     void setAutomaticDashSubstitutionEnabled(bool enabled, ExceptionCode&);
     void setAutomaticTextReplacementEnabled(bool enabled, ExceptionCode&);
     void setAutomaticSpellingCorrectionEnabled(bool enabled, ExceptionCode&);
+
+    void handleAcceptedCandidate(const String& candidate, ExceptionCode&);
 
     bool isOverwriteModeEnabled(ExceptionCode&);
     void toggleOverwriteModeEnabled(ExceptionCode&);
@@ -278,7 +281,7 @@ public:
 
     RefPtr<DOMWindow> openDummyInspectorFrontend(const String& url);
     void closeDummyInspectorFrontend();
-    void setJavaScriptProfilingEnabled(bool enabled, ExceptionCode&);
+    void setLegacyJavaScriptProfilingEnabled(bool enabled, ExceptionCode&);
     void setInspectorIsUnderTest(bool isUnderTest, ExceptionCode&);
 
     String counterValue(Element*);

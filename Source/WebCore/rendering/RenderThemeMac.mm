@@ -2337,12 +2337,34 @@ static void paintAttachmentIconBackground(const RenderAttachment&, GraphicsConte
     }
 }
 
+static RefPtr<Icon> iconForAttachment(const RenderAttachment& attachment)
+{
+    String MIMEType = attachment.attachmentElement().attachmentType();
+    if (!MIMEType.isEmpty()) {
+        if (equalIgnoringASCIICase(MIMEType, "multipart/x-folder")) {
+            if (auto icon = Icon::createIconForUTI("public.directory"))
+                return icon;
+        } else if (auto icon = Icon::createIconForMIMEType(MIMEType))
+            return icon;
+    }
+
+    if (File* file = attachment.attachmentElement().file()) {
+        if (auto icon = Icon::createIconForFiles({ file->path() }))
+            return icon;
+    }
+
+    NSString *fileExtension = [static_cast<NSString *>(attachment.attachmentElement().attachmentTitle()) pathExtension];
+    if (fileExtension.length) {
+        if (auto icon = Icon::createIconForFileExtension(fileExtension))
+            return icon;
+    }
+
+    return Icon::createIconForUTI("public.data");
+}
+
 static void paintAttachmentIcon(const RenderAttachment& attachment, GraphicsContext& context, AttachmentLayout& layout)
 {
-    Vector<String> filenames;
-    if (File* file = attachment.attachmentElement().file())
-        filenames.append(file->path());
-    RefPtr<Icon> icon = Icon::createIconForFiles(filenames);
+    auto icon = iconForAttachment(attachment);
     if (!icon)
         return;
     icon->paint(context, layout.iconRect);

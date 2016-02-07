@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2007, 2010-2015 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2007, 2010-2016 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
@@ -63,7 +63,6 @@ BEGIN {
        &chdirWebKit
        &checkFrameworks
        &cmakeBasedPortArguments
-       &cmakeBasedPortName
        &currentSVNRevision
        &debugSafari
        &executableProductDir
@@ -94,6 +93,17 @@ BEGIN {
    %EXPORT_TAGS = ( );
    @EXPORT_OK   = ();
 }
+
+# Ports
+use constant {
+    AppleWin => "AppleWin",
+    GTK      => "GTK",
+    Efl      => "Efl",
+    iOS      => "iOS",
+    Mac      => "Mac",
+    WinCairo => "WinCairo",
+    Unknown  => "Unknown"
+};
 
 use constant USE_OPEN_COMMAND => 1; # Used in runMacWebKitApp().
 use constant INCLUDE_OPTIONS_FOR_DEBUGGING => 1;
@@ -129,13 +139,15 @@ my $isGtk;
 my $isNix;
 my $isWinCairo;
 my $isWin64;
-my $isEfl;
 my $isInspectorFrontend;
+my $portName;
 my $shouldTargetWebProcess;
 my $shouldUseXPCServiceForWebProcess;
 my $shouldUseGuardMalloc;
 my $shouldNotUseNinja;
 my $xcodeVersion;
+
+my $unknownPortProhibited = 0;
 
 # Variables for Win32 support
 my $programFilesPath;
@@ -398,7 +410,7 @@ sub determineNumberOfCPUs
         if ($numberOfCPUs eq "") {
             $numberOfCPUs = (grep /processor/, `cat /proc/cpuinfo`);
         }
-    } elsif (isWindows() || isCygwin()) {
+    } elsif (isAnyWindows()) {
         # Assumes cygwin
         $numberOfCPUs = `ls /proc/registry/HKEY_LOCAL_MACHINE/HARDWARE/DESCRIPTION/System/CentralProcessor | wc -w`;
     } elsif (isDarwin() || isBSD()) {
@@ -419,7 +431,7 @@ sub jscPath($)
     my ($productDir) = @_;
     my $jscName = "jsc";
     $jscName .= "_debug"  if configuration() eq "Debug_All";
-    $jscName .= ".exe" if (isWindows() || isCygwin());
+    $jscName .= ".exe" if (isAnyWindows());
     return "$productDir/$jscName" if -e "$productDir/$jscName";
     return "$productDir/JavaScriptCore.framework/Resources/$jscName";
 }
@@ -932,7 +944,7 @@ sub builtDylibPathForName
 # Check to see that all the frameworks are built.
 sub checkFrameworks # FIXME: This is a poor name since only the Mac calls built WebCore a Framework.
 {
-    return if isCygwin() || isWindows();
+    return if isAnyWindows();
     my @frameworks = ("JavaScriptCore", "WebCore");
     push(@frameworks, "WebKit") if isAppleMacWebKit(); # FIXME: This seems wrong, all ports should have a WebKit these days.
     for my $framework (@frameworks) {
@@ -1027,28 +1039,73 @@ sub checkForArgumentAndRemoveFromArrayRef
     return scalar @indicesToRemove > 0;
 }
 
-sub determineIsEfl()
+sub prohibitUnknownPort()
 {
-    return if defined($isEfl);
-    $isEfl = checkForArgumentAndRemoveFromARGV("--efl");
+    $unknownPortProhibited = 1;
+}
+
+sub determinePortName()
+{
+    return if defined $portName;
+
+    my %argToPortName = (
+        efl => Efl,
+        gtk => GTK,
+        wincairo => WinCairo
+    );
+
+    for my $arg (sort keys %argToPortName) {
+        if (checkForArgumentAndRemoveFromARGV("--$arg")) {
+            die "Argument '--$arg' conflicts with selected port '$portName'\n"
+                if defined $portName;
+
+            $portName = $argToPortName{$arg};
+        }
+    }
+
+    return if defined $portName;
+
+    # Port was not selected via command line, use appropriate default value
+
+    if (isAnyWindows()) {
+        $portName = AppleWin;
+    } elsif (isDarwin()) {
+        determineXcodeSDK();
+        if (willUseIOSDeviceSDK() || willUseIOSSimulatorSDK()) {
+            $portName = iOS;
+        } else {
+            $portName = Mac;
+        }
+    } else {
+        if ($unknownPortProhibited) {
+            my $portsChoice = join "\n\t", qw(
+                --efl
+                --gtk
+            );
+            die "Please specify which WebKit port to build using one of the following options:"
+                . "\n\t$portsChoice\n";
+        }
+
+        # If script is run without arguments we cannot determine port
+        # TODO: This state should be outlawed
+        $portName = Unknown;
+    }
+}
+
+sub portName()
+{
+    determinePortName();
+    return $portName;
 }
 
 sub isEfl()
 {
-    determineIsEfl();
-    return $isEfl;
-}
-
-sub determineIsGtk()
-{
-    return if defined($isGtk);
-    $isGtk = checkForArgumentAndRemoveFromARGV("--gtk");
+    return portName() eq Efl;
 }
 
 sub isGtk()
 {
-    determineIsGtk();
-    return $isGtk;
+    return portName() eq GTK;
 }
 
 sub determineIsNix()
@@ -1076,14 +1133,7 @@ sub isFedoraBased()
 
 sub isWinCairo()
 {
-    determineIsWinCairo();
-    return $isWinCairo;
-}
-
-sub determineIsWinCairo()
-{
-    return if defined($isWinCairo);
-    $isWinCairo = checkForArgumentAndRemoveFromARGV("--wincairo");
+    return portName() eq WinCairo;
 }
 
 sub isWin64()
@@ -1206,12 +1256,12 @@ sub isAppleWebKit()
 
 sub isAppleMacWebKit()
 {
-    return isDarwin() && !isGtk();
+    return (portName() eq Mac) || isIOSWebKit();
 }
 
 sub isAppleWinWebKit()
 {
-    return (isCygwin() || isWindows()) && !isWinCairo() && !isGtk();
+    return portName() eq AppleWin;
 }
 
 sub iOSSimulatorDevicesPath
@@ -1274,8 +1324,7 @@ sub willUseIOSSimulatorSDK()
 
 sub isIOSWebKit()
 {
-    determineXcodeSDK();
-    return isAppleMacWebKit() && (willUseIOSDeviceSDK() || willUseIOSSimulatorSDK());
+    return portName() eq iOS;
 }
 
 sub determineNmPath()
@@ -1462,6 +1511,7 @@ sub setUpGuardMallocIfNeeded
 
     if ($shouldUseGuardMalloc) {
         appendToEnvironmentVariableList("DYLD_INSERT_LIBRARIES", "/usr/lib/libgmalloc.dylib");
+        appendToEnvironmentVariableList("__XPC_DYLD_INSERT_LIBRARIES", "/usr/lib/libgmalloc.dylib");
     }
 }
 
@@ -1527,7 +1577,6 @@ sub checkRequiredSystemConfig
             die "ERROR: $list missing but required to build WebKit.\n";
         }
     }
-    # Win32 and other platforms may want to check for minimum config
 }
 
 sub determineWindowsSourceDir()
@@ -1669,7 +1718,7 @@ sub setupAppleWinEnv()
 
 sub setupCygwinEnv()
 {
-    return if !isCygwin() && !isWindows();
+    return if !isAnyWindows();
     return if $vcBuildPath;
 
     my $programFilesPath = programFilesPath();
@@ -1840,7 +1889,7 @@ sub isCachedArgumentfileOutOfDate($@)
 
 sub wrapperPrefixIfNeeded()
 {
-    if (isWindows() || isCygwin()) {
+    if (isAnyWindows()) {
         return ();
     }
     if (isAppleMacWebKit()) {
@@ -1951,7 +2000,7 @@ sub cmakeGeneratedBuildfile(@)
     my ($willUseNinja) = @_;
     if ($willUseNinja) {
         return File::Spec->catfile(baseProductDir(), configuration(), "build.ninja")
-    } elsif (isWindows() || isCygwin()) {
+    } elsif (isAnyWindows()) {
         return File::Spec->catfile(baseProductDir(), configuration(), "WebKit.sln")
     } else {
         return File::Spec->catfile(baseProductDir(), configuration(), "Makefile")
@@ -1960,8 +2009,9 @@ sub cmakeGeneratedBuildfile(@)
 
 sub generateBuildSystemFromCMakeProject
 {
-    my ($port, $prefixPath, @cmakeArgs, $additionalCMakeArgs) = @_;
+    my ($prefixPath, @cmakeArgs) = @_;
     my $config = configuration();
+    my $port = cmakeBasedPortName();
     my $buildPath = File::Spec->catdir(baseProductDir(), $config);
     File::Path::mkpath($buildPath) unless -d $buildPath;
     my $originalWorkingDirectory = getcwd();
@@ -2000,7 +2050,6 @@ sub generateBuildSystemFromCMakeProject
     # Don't warn variables which aren't used by cmake ports.
     push @args, "--no-warn-unused-cli";
     push @args, @cmakeArgs if @cmakeArgs;
-    push @args, $additionalCMakeArgs if $additionalCMakeArgs;
 
     my $cmakeSourceDir = isCygwin() ? windowsSourceDir() : sourceDir();
     push @args, '"' . $cmakeSourceDir . '"';
@@ -2008,7 +2057,7 @@ sub generateBuildSystemFromCMakeProject
     # Compiler options to keep floating point values consistent
     # between 32-bit and 64-bit architectures.
     determineArchitecture();
-    if ($architecture ne "x86_64" && !isARM() && !isCrossCompilation() && !isWindows() && !isCygwin()) {
+    if ($architecture ne "x86_64" && !isARM() && !isCrossCompilation() && !isAnyWindows()) {
         $ENV{'CXXFLAGS'} = "-march=pentium4 -msse2 -mfpmath=sse " . ($ENV{'CXXFLAGS'} || "");
     }
 
@@ -2062,9 +2111,9 @@ sub cleanCMakeGeneratedProject()
     return 0;
 }
 
-sub buildCMakeProjectOrExit($$$$@)
+sub buildCMakeProjectOrExit($$$@)
 {
-    my ($clean, $port, $prefixPath, $makeArgs, @cmakeArgs) = @_;
+    my ($clean, $prefixPath, $makeArgs, @cmakeArgs) = @_;
     my $returnCode;
 
     exit(exitStatus(cleanCMakeGeneratedProject())) if $clean;
@@ -2077,7 +2126,7 @@ sub buildCMakeProjectOrExit($$$$@)
         system("perl", "$sourceDir/Tools/Scripts/update-webkitgtk-libs") == 0 or die $!;
     }
 
-    $returnCode = exitStatus(generateBuildSystemFromCMakeProject($port, $prefixPath, @cmakeArgs));
+    $returnCode = exitStatus(generateBuildSystemFromCMakeProject($prefixPath, @cmakeArgs));
     exit($returnCode) if $returnCode;
 
     $returnCode = exitStatus(buildCMakeGeneratedProject($makeArgs));
@@ -2112,6 +2161,7 @@ sub isCMakeBuild()
     if (isEfl() || isGtk() || isNix() || isAnyWindows()) {
         return 1;
     }
+    return 1 unless isAppleMacWebKit();
     determineIsCMakeBuild();
     return $isCMakeBuild;
 }

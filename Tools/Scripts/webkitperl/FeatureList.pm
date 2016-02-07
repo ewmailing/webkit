@@ -52,7 +52,6 @@ my (
     $canvasProxySupport,
     $channelMessagingSupport,
     $classSyntax,
-    $currentsrcSupport,
     $templateLiteralSyntax,
     $cspNextSupport,
     $css3TextSupport,
@@ -155,6 +154,8 @@ my (
     $ftlJITSupport,
 );
 
+prohibitUnknownPort();
+
 my @features = (
     { option => "3d-rendering", desc => "Toggle 3D Rendering support",
       define => "ENABLE_3D_TRANSFORMS", default => (isAppleMacWebKit() || isIOSWebKit() || isGtk() || isEfl()), value => \$threeDTransformsSupport },
@@ -230,9 +231,6 @@ my @features = (
 
     { option => "css-compositing", desc => "Toggle CSS Compositing support",
       define => "ENABLE_CSS_COMPOSITING", default => isAppleWebKit(), value => \$cssCompositingSupport },
-
-    { option => "currentsrc", desc => "Toggle currentSrc attribute support",
-      define => "ENABLE_CURRENTSRC", default => 1, value => \$currentsrcSupport },
 
     { option => "custom-elements", desc => "Toggle custom elements support",
       define => "ENABLE_CUSTOM_ELEMENTS", default => (isAppleMacWebKit() || isIOSWebKit()), value => \$customElementsSupport },
@@ -340,7 +338,7 @@ my @features = (
       define => "ENABLE_MEDIA_STATISTICS", default => 0, value => \$mediaStatisticsSupport },
 
     { option => "media-stream", desc => "Toggle Media Stream support",
-      define => "ENABLE_MEDIA_STREAM", default => (isGtk() || isEfl()), value => \$mediaStreamSupport },
+      define => "ENABLE_MEDIA_STREAM", default => 0, value => \$mediaStreamSupport },
 
     { option => "meter-element", desc => "Toggle Meter Element support",
       define => "ENABLE_METER_ELEMENT", default => !isAppleWinWebKit(), value => \$meterElementSupport },

@@ -677,8 +677,11 @@
     <ClCompile Include="..\page\animation\CompositeAnimation.cpp">
       <Filter>page</Filter>
     </ClCompile>
-    <ClCompile Include="..\page\ContentSecurityPolicy.cpp">
-      <Filter>page</Filter>
+    <ClCompile Include="..\page\csp\ContentSecurityPolicy.cpp">
+      <Filter>page\csp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\page\csp\ContentSecurityPolicyResponseHeaders.cpp">
+      <Filter>page\csp</Filter>
     </ClCompile>
     <ClCompile Include="..\page\ContextMenuController.cpp">
       <Filter>page</Filter>
@@ -1770,6 +1773,9 @@
       <Filter>platform\network</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\NetworkStorageSessionStub.cpp">
+      <Filter>platform\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\network\ParsedContentRange.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\ParsedContentType.cpp">
@@ -3629,9 +3635,6 @@
     <ClCompile Include="..\html\DOMFormData.cpp">
       <Filter>html</Filter>
     </ClCompile>
-    <ClCompile Include="..\html\DOMSettableTokenList.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
     <ClCompile Include="..\html\DOMTokenList.cpp">
       <Filter>html</Filter>
     </ClCompile>
@@ -3711,6 +3714,9 @@
       <Filter>html</Filter>
     </ClCompile>
     <ClCompile Include="..\html\HTMLCollection.cpp">
+      <Filter>html</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\HTMLDataElement.cpp">
       <Filter>html</Filter>
     </ClCompile>
     <ClCompile Include="..\html\HTMLDataListElement.cpp">
@@ -5211,9 +5217,6 @@
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSelection.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSettableTokenList.cpp">
-      <Filter>DerivedSources</Filter>
-    </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMStringList.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
@@ -5314,6 +5317,9 @@
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLCollection.cpp">
+      <Filter>DerivedSources</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataElement.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataListElement.cpp">
@@ -7657,8 +7663,11 @@
     <ClInclude Include="..\page\animation\CompositeAnimation.h">
       <Filter>page</Filter>
     </ClInclude>
-    <ClInclude Include="..\page\ContentSecurityPolicy.h">
-      <Filter>page</Filter>
+    <ClInclude Include="..\page\csp\ContentSecurityPolicy.h">
+      <Filter>page\csp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\page\csp\ContentSecurityPolicyResponseHeaders.h">
+      <Filter>page\csp</Filter>
     </ClInclude>
     <ClInclude Include="..\page\ContextMenuClient.h">
       <Filter>page</Filter>
@@ -8771,6 +8780,9 @@
       <Filter>platform\network</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\network\NetworkStorageSession.h">
+      <Filter>platform\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platform\network\ParsedContenRange.h">
       <Filter>platform\network</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\network\ParsedContentType.h">
@@ -10783,9 +10795,6 @@
     <ClInclude Include="..\html\DOMFormData.h">
       <Filter>html</Filter>
     </ClInclude>
-    <ClInclude Include="..\html\DOMSettableTokenList.h">
-      <Filter>html</Filter>
-    </ClInclude>
     <ClInclude Include="..\html\DOMTokenList.h">
       <Filter>html</Filter>
     </ClInclude>
@@ -10874,6 +10883,9 @@
       <Filter>html</Filter>
     </ClInclude>
     <ClInclude Include="..\html\HTMLCollection.h">
+      <Filter>html</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\HTMLDataElement.h">
       <Filter>html</Filter>
     </ClInclude>
     <ClInclude Include="..\html\HTMLDataListElement.h">
@@ -12624,9 +12636,6 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSelection.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSettableTokenList.h">
-      <Filter>DerivedSources</Filter>
-    </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMStringList.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
@@ -12727,6 +12736,9 @@
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLCollection.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataElement.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataListElement.h">

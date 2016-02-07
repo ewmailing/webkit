@@ -33,9 +33,12 @@
 #include "B3Dominators.h"
 #include "B3MemoryValue.h"
 #include "B3Procedure.h"
-#include "B3StackSlotValue.h"
+#include "B3SlotBaseValue.h"
+#include "B3StackSlot.h"
 #include "B3UpsilonValue.h"
 #include "B3ValueInlines.h"
+#include "B3Variable.h"
+#include "B3VariableValue.h"
 #include <wtf/HashSet.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/text/CString.h>
@@ -152,7 +155,15 @@ public:
                 VALIDATE(!value->numChildren(), ("At ", *value));
                 VALIDATE(value->type() == Float, ("At ", *value));
                 break;
-            case StackSlot:
+            case Set:
+                VALIDATE(value->numChildren() == 1, ("At ", *value));
+                VALIDATE(value->child(0)->type() == value->as<VariableValue>()->variable()->type(), ("At ", *value));
+                break;
+            case Get:
+                VALIDATE(!value->numChildren(), ("At ", *value));
+                VALIDATE(value->type() == value->as<VariableValue>()->variable()->type(), ("At ", *value));
+                break;
+            case SlotBase:
             case FramePointer:
                 VALIDATE(!value->numChildren(), ("At ", *value));
                 VALIDATE(value->type() == pointerType(), ("At ", *value));
@@ -374,6 +385,9 @@ public:
 
             VALIDATE(!(value->effects().writes && value->key()), ("At ", *value));
         }
+
+        for (Variable* variable : m_procedure.variables())
+            VALIDATE(variable->type() != Void, ("At ", *variable));
     }
 
 private:
@@ -410,9 +424,11 @@ private:
     void validateStackAccess(Value* value)
     {
         MemoryValue* memory = value->as<MemoryValue>();
-        StackSlotValue* stack = value->lastChild()->as<StackSlotValue>();
-        if (!stack)
+        SlotBaseValue* slotBase = value->lastChild()->as<SlotBaseValue>();
+        if (!slotBase)
             return;
+
+        StackSlot* stack = slotBase->slot();
 
         VALIDATE(memory->offset() >= 0, ("At ", *value));
         VALIDATE(memory->offset() + memory->accessByteSize() <= stack->byteSize(), ("At ", *value));

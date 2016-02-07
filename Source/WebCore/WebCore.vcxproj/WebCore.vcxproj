@@ -1747,20 +1747,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSettableTokenList.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMStringList.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -2252,6 +2238,20 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLCollection.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataElement.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
@@ -7289,7 +7289,8 @@
     </ClCompile>
     <ClCompile Include="..\page\Chrome.cpp" />
     <ClCompile Include="..\page\animation\CompositeAnimation.cpp" />
-    <ClCompile Include="..\page\ContentSecurityPolicy.cpp" />
+    <ClCompile Include="..\page\csp\ContentSecurityPolicy.cpp" />
+    <ClCompile Include="..\page\csp\ContentSecurityPolicyResponseHeaders.cpp" />
     <ClCompile Include="..\page\ContextMenuContext.cpp" />
     <ClCompile Include="..\page\ContextMenuController.cpp" />
     <ClCompile Include="..\page\Crypto.cpp" />
@@ -8872,6 +8873,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\platform\network\ParsedContentRange.cpp" />
     <ClCompile Include="..\platform\network\ParsedContentType.cpp" />
     <ClCompile Include="..\platform\network\ProtectionSpaceBase.cpp" />
     <ClCompile Include="..\platform\network\ProxyServer.cpp" />
@@ -16222,7 +16224,6 @@
     <ClCompile Include="..\html\DateTimeInputType.cpp" />
     <ClCompile Include="..\html\DateTimeLocalInputType.cpp" />
     <ClCompile Include="..\html\DOMFormData.cpp" />
-    <ClCompile Include="..\html\DOMSettableTokenList.cpp" />
     <ClCompile Include="..\html\DOMTokenList.cpp" />
     <ClCompile Include="..\html\DOMURL.cpp" />
     <ClCompile Include="..\html\MediaElementSession.cpp" />
@@ -16397,6 +16398,20 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\html\HTMLCollection.cpp" />
+    <ClCompile Include="..\html\HTMLDataElement.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\html\HTMLDataListElement.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -19215,6 +19230,7 @@
     <ClCompile Include="..\style\StyleChange.cpp" />
     <ClCompile Include="..\style\StyleFontSizeFunctions.cpp" />
     <ClCompile Include="..\style\StyleResolveForDocument.cpp" />
+    <ClCompile Include="..\style\StyleSharingResolver.cpp" />
     <ClCompile Include="..\style\StyleTreeResolver.cpp" />
     <ClCompile Include="..\bridge\jsc\BridgeJSC.cpp" />
     <ClCompile Include="..\bridge\c\c_class.cpp" />
@@ -19881,7 +19897,6 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMPlugin.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMPluginArray.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSelection.h" />
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMSettableTokenList.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMStringList.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMStringMap.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDOMTokenList.h" />
@@ -19918,6 +19933,7 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLButtonElement.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLCanvasElement.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLCollection.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataElement.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDataListElement.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDetailsElement.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSHTMLDirectoryElement.h" />
@@ -20670,7 +20686,8 @@
     <ClInclude Include="..\page\Chrome.h" />
     <ClInclude Include="..\page\ChromeClient.h" />
     <ClInclude Include="..\page\animation\CompositeAnimation.h" />
-    <ClInclude Include="..\page\ContentSecurityPolicy.h" />
+    <ClInclude Include="..\page\csp\ContentSecurityPolicy.h" />
+    <ClInclude Include="..\page\csp\ContentSecurityPolicyResponseHeaders.h" />
     <ClInclude Include="..\page\ContextMenuClient.h" />
     <ClInclude Include="..\page\ContextMenuContext.h" />
     <ClInclude Include="..\page\ContextMenuController.h" />
@@ -21323,6 +21340,7 @@
     <ClInclude Include="..\platform\network\NetworkingContext.h" />
     <ClInclude Include="..\platform\network\NetworkStateNotifier.h" />
     <ClInclude Include="..\platform\network\NetworkStorageSession.h" />
+    <ClInclude Include="..\platform\network\ParsedContentRange.h" />
     <ClInclude Include="..\platform\network\ParsedContentType.h" />
     <ClInclude Include="..\platform\network\PlatformCookieJar.h" />
     <ClInclude Include="..\platform\network\ProtectionSpace.h" />
@@ -22258,7 +22276,6 @@
     <ClInclude Include="..\html\DateTimeInputType.h" />
     <ClInclude Include="..\html\DateTimeLocalInputType.h" />
     <ClInclude Include="..\html\DOMFormData.h" />
-    <ClInclude Include="..\html\DOMSettableTokenList.h" />
     <ClInclude Include="..\html\DOMTokenList.h" />
     <ClInclude Include="..\html\DOMURL.h" />
     <ClInclude Include="..\html\EmailInputType.h" />
@@ -22290,6 +22307,7 @@
     <ClInclude Include="..\html\HTMLButtonElement.h" />
     <ClInclude Include="..\html\HTMLCanvasElement.h" />
     <ClInclude Include="..\html\HTMLCollection.h" />
+    <ClInclude Include="..\html\HTMLDataElement.h" />
     <ClInclude Include="..\html\HTMLDataListElement.h" />
     <ClInclude Include="..\html\HTMLDetailsElement.h" />
     <ClInclude Include="..\html\HTMLDirectoryElement.h" />
@@ -22778,6 +22796,7 @@
     <ClInclude Include="..\style\StyleChange.h" />
     <ClInclude Include="..\style\StyleFontSizeFunctions.h" />
     <ClInclude Include="..\style\StyleResolveForDocument.h" />
+    <ClInclude Include="..\style\StyleSharingResolver.h" />
     <ClInclude Include="..\style\StyleTreeResolver.h" />
     <ClInclude Include="..\bridge\Bridge.h" />
     <ClInclude Include="..\bridge\jsc\BridgeJSC.h" />

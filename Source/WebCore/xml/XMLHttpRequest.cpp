@@ -405,7 +405,7 @@ String XMLHttpRequest::uppercaseKnownHTTPMethod(const String& method)
 {
     const char* const methods[] = { "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT" };
     for (auto* value : methods) {
-        if (equalIgnoringCase(method, value)) {
+        if (equalIgnoringASCIICase(method, value)) {
             // Don't bother allocating a new string if it's already all uppercase.
             if (method == value)
                 break;
@@ -1030,9 +1030,7 @@ String XMLHttpRequest::responseMIMEType() const
 
 bool XMLHttpRequest::responseIsXML() const
 {
-    // FIXME: Remove the lower() call when DOMImplementation.isXMLMIMEType() is modified
-    //        to do case insensitive MIME type matching.
-    return DOMImplementation::isXMLMIMEType(responseMIMEType().lower());
+    return DOMImplementation::isXMLMIMEType(responseMIMEType());
 }
 
 int XMLHttpRequest::status() const

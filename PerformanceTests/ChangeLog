@@ -1,3 +1,137 @@
+2016-02-06  Jon Lee  <jonlee@apple.com>
+
+        Code clean up: Move Rotater function closer to Stage static methods.
+        The Rotater is used together with those methods; keep them close.
+
+        * Animometer/tests/resources/main.js:
+
+2016-02-06  Jon Lee  <jonlee@apple.com>
+
+        Update the JS includes due to ResultsTable move.
+
+        * Animometer/developer.html:
+        * Animometer/index.html:
+
+2016-02-06  Jon Lee  <jonlee@apple.com>
+
+        Move createElement and createSVGElement to Utilities.
+
+        * Animometer/resources/extensions.js:
+        (Utilities.createElement): Added.
+        (Utilities.createSVGElement): Added.
+        (DocumentExtension.createElement): Deleted.
+        (DocumentExtension.createSvgElement): Deleted.
+
+        * Animometer/resources/debug-runner/animometer.js:
+        * Animometer/resources/runner/animometer.js:
+        * Animometer/tests/bouncing-particles/resources/bouncing-svg-images.js:
+        * Animometer/tests/bouncing-particles/resources/bouncing-svg-particles.js:
+        * Animometer/tests/bouncing-particles/resources/bouncing-svg-shapes.js:
+
+2016-02-06  Jon Lee  <jonlee@apple.com>
+
+        Add a convenience function for creating a class.
+
+        The pattern for creating a class is common enough to add as a Utilities
+        helper function. It also makes it easy to collapse class definitions when
+        editing.
+
+        * Animometer/resources/debug-runner/animometer.js: Move ProgressBar definition,
+        since it is only used here.
+        * Animometer/resources/runner/animometer.js: Move ResultsDashboard and
+        ResultsTable definition, since it is only used here.
+        * Animometer/resources/extensions.js: Move Utilities definition to the top. Convert
+        Point, Insets, SimplePromise.
+        (ProgressBar): Moved to animometer.js.
+        (ResultsDashboard): Moved to animometer.js.
+        (ResultsTable): Moved to animometer.js.
+        * Animometer/resources/runner/benchmark-runner.js: Convert BenchmarkRunnerState,
+        BenchmarkRunner.
+        * Animometer/tests/resources/main.js: Convert Rotater, Stage, Animator, Benchmark.
+        * Animometer/tests/resources/sampler.js: Convert Experiment, Sampler.
+
+        Convert test primitives.
+        * Animometer/tests/master/resources/canvas-tests.js: Convert CanvasLineSegment,
+        CanvasArc, CanvasLinePoint.
+        * Animometer/tests/simple/resources/simple-canvas-paths.js: Convert CanvasLineSegment,
+        CanvasLinePoint, CanvasQuadraticSegment, CanvasQuadraticPoint, CanvasBezierSegment,
+        CanvasBezierPoint, CanvasArcToSegment, CanvasArcToSegmentFill, CanvasArcSegment,
+        CanvasArcSegmentFill, CanvasRect, CanvasRectFill.
+        * Animometer/tests/simple/resources/tiled-canvas-image.js: Convert CanvasImageTile.
+
+2016-02-06  Jon Lee  <jonlee@apple.com>
+
+        Minor improvements to debug harness.
+
+        * Animometer/developer.html:
+        * Animometer/resources/debug-runner/animometer.css:
+        (#suites): Put the complexity text boxes closer to the test names.
+        (#options):
+        (#rawFPS circle): Make the interval FPS appear as a separate data series, with a line.
+        (#intervalFPS path):
+        (#intervalFPS circle):
+        * Animometer/resources/debug-runner/animometer.js:
+        (window.optionsManager.updateLocalStorageFromUI): Convert number inputs from text.
+        (window.suitesManager._onChangeTestCheckbox): Refactor to take a checkbox.
+        (window.suitesManager._createTestElement): Enhance such that typing into the complexity
+        input will automatically select that test for running.
+        (window.suitesManager.updateLocalStorageFromJSON): Make the harness work for private
+        browsing.
+        * Animometer/resources/debug-runner/graph.js: Separate the intervalFPS data, and show
+        more accuracy in timestamps.
+
+2016-02-06  Jon Lee  <jonlee@apple.com>
+
+        Refactor helper methods for getting random values for a stage.
+
+        Instead of requiring a Stage instance, just attach it to the Stage object.
+
+        * Animometer/tests/bouncing-particles/resources/bouncing-canvas-shapes.js:
+        * Animometer/tests/bouncing-particles/resources/bouncing-css-shapes.js:
+        * Animometer/tests/bouncing-particles/resources/bouncing-particles.js:
+        * Animometer/tests/bouncing-particles/resources/bouncing-svg-shapes.js:
+        * Animometer/tests/master/resources/canvas-tests.js:
+        * Animometer/tests/master/resources/particles.js:
+        * Animometer/tests/misc/resources/canvas-electrons.js:
+        * Animometer/tests/misc/resources/canvas-stars.js:
+        * Animometer/tests/misc/resources/compositing-transforms.js:
+        * Animometer/tests/resources/main.js:
+        * Animometer/tests/simple/resources/simple-canvas-paths.js:
+
+2016-02-05  Said Abou-Hallawa  <sabouhallawa@apple.com>
+
+        Add a new graphics test for CanvasRenderingContext2D functions: getImageData and putImageData
+        https://bugs.webkit.org/show_bug.cgi?id=151716
+
+        Reviewed by Darin Adler.
+
+        The purpose of this test is to measure the performance of getImageData
+        and putImageData functions. This test draws a background on the canvas
+        and then gets some random tiles from this background and draw them in
+        destinations different from their original sources.
+
+        * Animometer/resources/debug-runner/tests.js: Adding the new test to the canvas simple tests suite.
+
+        * Animometer/resources/extensions.js:
+        (Array.prototype.shuffle): Shuffles the elements of an array.
+
+        (Point.zero): Returns a new Point object whose x and y are equal zero.
+        (Point.prototype.str): Used for debugging the Point object.
+
+        * Animometer/tests/simple/resources/tiled-canvas-image.js: Added.
+        (CanvasImageTile):
+        (CanvasImageTile.prototype.getImageData):
+        (CanvasImageTile.prototype.putImageData):
+        (Stage.call.initialize):
+        (Stage.call._createTiles):
+        (Stage.call._nextTilePosition):
+        (Stage.call.tune):
+        (Stage.call._drawBackground):
+        (Stage.call.animate):
+        (Stage.call.complexity):
+        (Stage.call):
+        * Animometer/tests/simple/tiled-canvas-image.html: Added.
+
 2016-01-07  Jon Lee  <jonlee@apple.com>
 
         Fix new test.

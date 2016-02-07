@@ -141,8 +141,8 @@ struct GlobalObjectMethodTable {
     typedef bool (*AllowsAccessFromFunctionPtr)(const JSGlobalObject*, ExecState*);
     AllowsAccessFromFunctionPtr allowsAccessFrom;
 
-    typedef bool (*SupportsProfilingFunctionPtr)(const JSGlobalObject*); 
-    SupportsProfilingFunctionPtr supportsProfiling;
+    typedef bool (*SupportsLegacyProfilingFunctionPtr)(const JSGlobalObject*);
+    SupportsLegacyProfilingFunctionPtr supportsLegacyProfiling;
 
     typedef bool (*SupportsRichSourceInfoFunctionPtr)(const JSGlobalObject*);
     SupportsRichSourceInfoFunctionPtr supportsRichSourceInfo;
@@ -263,6 +263,7 @@ protected:
     WriteBarrier<Structure> m_calleeStructure;
     WriteBarrier<Structure> m_functionStructure;
     WriteBarrier<Structure> m_boundFunctionStructure;
+    WriteBarrier<Structure> m_boundSlotBaseFunctionStructure;
     WriteBarrier<Structure> m_nativeStdFunctionStructure;
     WriteBarrier<Structure> m_namedFunctionStructure;
     PropertyOffset m_functionNameOffset;
@@ -360,7 +361,7 @@ public:
     DECLARE_EXPORT_INFO;
 
     bool hasDebugger() const { return m_debugger; }
-    bool hasProfiler() const;
+    bool hasLegacyProfiler() const;
     const RuntimeFlags& runtimeFlags() const { return m_runtimeFlags; }
 
 protected:
@@ -511,6 +512,7 @@ public:
     Structure* calleeStructure() const { return m_calleeStructure.get(); }
     Structure* functionStructure() const { return m_functionStructure.get(); }
     Structure* boundFunctionStructure() const { return m_boundFunctionStructure.get(); }
+    Structure* boundSlotBaseFunctionStructure() const { return m_boundSlotBaseFunctionStructure.get(); }
     Structure* nativeStdFunctionStructure() const { return m_nativeStdFunctionStructure.get(); }
     Structure* namedFunctionStructure() const { return m_namedFunctionStructure.get(); }
     PropertyOffset functionNameOffset() const { return m_functionNameOffset; }
@@ -619,7 +621,7 @@ public:
     const GlobalObjectMethodTable* globalObjectMethodTable() const { return m_globalObjectMethodTable; }
 
     static bool allowsAccessFrom(const JSGlobalObject*, ExecState*) { return true; }
-    static bool supportsProfiling(const JSGlobalObject*) { return false; }
+    static bool supportsLegacyProfiling(const JSGlobalObject*) { return false; }
     static bool supportsRichSourceInfo(const JSGlobalObject*) { return true; }
 
     JS_EXPORT_PRIVATE ExecState* globalExec();

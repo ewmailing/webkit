@@ -1,37 +1,3 @@
-function Rotater(rotateInterval)
-{
-    this._timeDelta = 0;
-    this._rotateInterval = rotateInterval;
-}
-
-Rotater.prototype =
-{
-    get interval()
-    {
-        return this._rotateInterval;
-    },
-
-    next: function(timeDelta)
-    {
-        this._timeDelta = (this._timeDelta + timeDelta) % this._rotateInterval;
-    },
-
-    degree: function()
-    {
-        return (360 * this._timeDelta) / this._rotateInterval;
-    },
-
-    rotateZ: function()
-    {
-        return "rotateZ(" + Math.floor(this.degree()) + "deg)";
-    },
-
-    rotate: function(center)
-    {
-        return "rotate(" + Math.floor(this.degree()) + ", " + center.x + "," + center.y + ")";
-    }
-};
-
 function BenchmarkState(testInterval)
 {
     this._currentTimeOffset = 0;
@@ -82,11 +48,11 @@ BenchmarkState.prototype =
     }
 }
 
+Stage = Utilities.createClass(
+    function()
+    {
+    }, {
 
-function Stage() {}
-
-Stage.prototype =
-{
     initialize: function(benchmark)
     {
         this._benchmark = benchmark;
@@ -111,6 +77,23 @@ Stage.prototype =
         return 0;
     },
 
+    tune: function()
+    {
+        throw "Not implemented";
+    },
+
+    animate: function()
+    {
+        throw "Not implemented";
+    },
+
+    clear: function()
+    {
+        return this.tune(-this.tune(0));
+    }
+});
+
+Utilities.extendObject(Stage, {
     random: function(min, max)
     {
         return (Math.random() * (max - min)) + min;
@@ -160,34 +143,52 @@ Stage.prototype =
     randomRotater: function()
     {
         return new Rotater(this.random(1000, 10000));
-    },
-
-    tune: function()
-    {
-        throw "Not implemented";
-    },
-
-    animate: function()
-    {
-        throw "Not implemented";
-    },
-
-    clear: function()
-    {
-        return this.tune(-this.tune(0));
     }
-};
+});
 
-function Animator()
-{
-    this._intervalFrameCount = 0;
-    this._numberOfFramesToMeasurePerInterval = 3;
-    this._referenceTime = 0;
-    this._currentTimeOffset = 0;
-}
+Rotater = Utilities.createClass(
+    function(rotateInterval)
+    {
+        this._timeDelta = 0;
+        this._rotateInterval = rotateInterval;
+        this._isSampling = false;
+    }, {
 
-Animator.prototype =
-{
+    get interval()
+    {
+        return this._rotateInterval;
+    },
+
+    next: function(timeDelta)
+    {
+        this._timeDelta = (this._timeDelta + timeDelta) % this._rotateInterval;
+    },
+
+    degree: function()
+    {
+        return (360 * this._timeDelta) / this._rotateInterval;
+    },
+
+    rotateZ: function()
+    {
+        return "rotateZ(" + Math.floor(this.degree()) + "deg)";
+    },
+
+    rotate: function(center)
+    {
+        return "rotate(" + Math.floor(this.degree()) + ", " + center.x + "," + center.y + ")";
+    }
+});
+
+Animator = Utilities.createClass(
+    function()
+    {
+        this._intervalFrameCount = 0;
+        this._numberOfFramesToMeasurePerInterval = 3;
+        this._referenceTime = 0;
+        this._currentTimeOffset = 0;
+    }, {
+
     initialize: function(benchmark)
     {
         this._benchmark = benchmark;
@@ -256,26 +257,25 @@ Animator.prototype =
             requestAnimationFrame(this.animateLoop.bind(this));
         }
     }
-}
+});
 
-function Benchmark(stage, options)
-{
-    this._options = options;
+Benchmark = Utilities.createClass(
+    function(stage, options)
+    {
+        this._options = options;
 
-    this._stage = stage;
-    this._stage.initialize(this);
-    this._animator = new Animator();
-    this._animator.initialize(this);
+        this._stage = stage;
+        this._stage.initialize(this);
+        this._animator = new Animator();
+        this._animator.initialize(this);
 
-    this._recordInterval = 200;
-    this._isSampling = false;
-    this._controller = new PIDController(this._options["frame-rate"]);
-    this._sampler = new Sampler(4, 60 * this._options["test-interval"], this);
-    this._state = new BenchmarkState(this._options["test-interval"] * 1000);
-}
+        this._recordInterval = 200;
+        this._isSampling = false;
+        this._controller = new PIDController(this._options["frame-rate"]);
+        this._sampler = new Sampler(4, 60 * this._options["test-interval"], this);
+        this._state = new BenchmarkState(this._options["test-interval"] * 1000);
+    }, {
 
-Benchmark.prototype =
-{
     get options()
     {
         return this._options;
@@ -422,4 +422,4 @@ Benchmark.prototype =
             results[jsonExperiment][Strings.json.measurements.percent] = experiment.percentage();
         });
     }
-};
+});

@@ -475,9 +475,24 @@ enum TextZoom {
     TextZoomNormal, TextZoomReset
 };
 
-enum EPageBreak {
-    PBAUTO, PBALWAYS, PBAVOID
+enum BreakBetween {
+    AutoBreakBetween, AvoidBreakBetween, AvoidColumnBreakBetween, AvoidPageBreakBetween, AvoidRegionBreakBetween, ColumnBreakBetween, RegionBreakBetween, PageBreakBetween, LeftPageBreakBetween, RightPageBreakBetween, RectoPageBreakBetween, VersoPageBreakBetween
 };
+bool alwaysPageBreak(BreakBetween);
+    
+enum BreakInside {
+    AutoBreakInside, AvoidBreakInside, AvoidColumnBreakInside, AvoidPageBreakInside, AvoidRegionBreakInside
+};
+
+enum HangingPunctuation {
+    NoHangingPunctuation = 0,
+    FirstHangingPunctuation = 1 << 0,
+    LastHangingPunctuation = 1 << 1,
+    AllowEndHangingPunctuation = 1 << 2,
+    ForceEndHangingPunctuation = 1 << 3
+};
+inline HangingPunctuation operator| (HangingPunctuation a, HangingPunctuation b) { return HangingPunctuation(int(a) | int(b)); }
+inline HangingPunctuation& operator|= (HangingPunctuation& a, HangingPunctuation b) { return a = a | b; }
 
 enum EEmptyCell {
     SHOW, HIDE
@@ -593,7 +608,13 @@ enum class TextOrientation { Mixed, Upright, Sideways };
 
 enum TextOverflow { TextOverflowClip = 0, TextOverflowEllipsis };
 
-enum EImageRendering { ImageRenderingAuto = 0, ImageRenderingOptimizeSpeed, ImageRenderingOptimizeQuality, ImageRenderingCrispEdges };
+enum EImageRendering {
+    ImageRenderingAuto = 0,
+    ImageRenderingOptimizeSpeed,
+    ImageRenderingOptimizeQuality,
+    ImageRenderingCrispEdges,
+    ImageRenderingPixelated
+};
 
 enum ImageResolutionSource { ImageResolutionSpecified = 0, ImageResolutionFromImage };
 

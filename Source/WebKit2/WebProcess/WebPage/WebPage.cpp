@@ -170,6 +170,10 @@
 #include <wtf/RunLoop.h>
 #include <wtf/TemporaryChange.h>
 
+#if ENABLE(DATA_DETECTION)
+#include "DataDetectionResult.h"
+#endif
+
 #if ENABLE(MHTML)
 #include <WebCore/MHTMLArchive.h>
 #endif
@@ -190,6 +194,7 @@
 #include "PDFPlugin.h"
 #include "RemoteLayerTreeTransaction.h"
 #include "WKStringCF.h"
+#include "WebVideoFullscreenManager.h"
 #include <WebCore/LegacyWebArchive.h>
 #endif
 
@@ -201,7 +206,6 @@
 
 #if PLATFORM(IOS)
 #include "RemoteLayerTreeDrawingArea.h"
-#include "WebVideoFullscreenManager.h"
 #include <CoreGraphics/CoreGraphics.h>
 #include <WebCore/CoreTextSPI.h>
 #include <WebCore/Icon.h>
@@ -225,6 +229,10 @@
 
 #if ENABLE(VIDEO) && USE(GSTREAMER)
 #include <WebCore/MediaPlayerRequestInstallMissingPluginsCallback.h>
+#endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WebPageIncludes.h>
 #endif
 
 using namespace JSC;
@@ -379,6 +387,7 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 #if USE(AUTOCORRECTION_PANEL)
     pageConfiguration.alternativeTextClient = new WebAlternativeTextClient(this);
 #endif
+
     pageConfiguration.plugInClient = new WebPlugInClient(*this);
     pageConfiguration.loaderClientForMainFrame = new WebFrameLoaderClient;
     pageConfiguration.progressTrackerClient = new WebProgressTrackerClient(*this);
@@ -388,6 +397,10 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
     pageConfiguration.storageNamespaceProvider = WebStorageNamespaceProvider::getOrCreate(m_pageGroup->pageGroupID());
     pageConfiguration.userContentController = m_userContentController ? &m_userContentController->userContentController() : &m_pageGroup->userContentController();
     pageConfiguration.visitedLinkStore = VisitedLinkTableController::getOrCreate(parameters.visitedLinkTableID);
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WebPageInitialization.h>
+#endif
 
     m_page = std::make_unique<Page>(pageConfiguration);
 
@@ -450,7 +463,8 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
     setPaginationBehavesLikeColumns(parameters.paginationBehavesLikeColumns);
     setPageLength(parameters.pageLength);
     setGapBetweenPages(parameters.gapBetweenPages);
-
+    setPaginationLineGridEnabled(parameters.paginationLineGridEnabled);
+    
     // If the page is created off-screen, its visibilityState should be prerender.
     m_page->setViewState(m_viewState);
     if (!isVisible())
@@ -1668,6 +1682,11 @@ void WebPage::setGapBetweenPages(double gap)
     m_page->setPagination(pagination);
 }
 
+void WebPage::setPaginationLineGridEnabled(bool lineGridEnabled)
+{
+    m_page->setPaginationLineGridEnabled(lineGridEnabled);
+}
+
 void WebPage::postInjectedBundleMessage(const String& messageName, const UserData& userData)
 {
     auto& webProcess = WebProcess::singleton();
@@ -2849,7 +2868,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings.setAllowsAirPlayForMediaPlayback(store.getBoolValueForKey(WebPreferencesKey::allowsAirPlayForMediaPlaybackKey()));
 #endif
 
-#if ENABLE(RESOURCE_USAGE_OVERLAY)
+#if ENABLE(RESOURCE_USAGE)
     settings.setResourceUsageOverlayVisible(store.getBoolValueForKey(WebPreferencesKey::resourceUsageOverlayVisibleKey()));
 #endif
 
@@ -2968,6 +2987,15 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 #endif
 }
 
+#if ENABLE(DATA_DETECTION)
+void WebPage::setDataDetectionResults(NSArray *detectionResults)
+{
+    DataDetectionResult dataDetectionResult;
+    dataDetectionResult.results = detectionResults;
+    send(Messages::WebPageProxy::SetDataDetectionResult(dataDetectionResult));
+}
+#endif
+
 #if PLATFORM(COCOA)
 void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction)
 {
@@ -2982,6 +3010,8 @@ void WebPage::willCommitLayerTree(RemoteLayerTreeTransaction& layerTransaction)
     layerTransaction.setMaximumScaleFactor(m_viewportConfiguration.maximumScale());
     layerTransaction.setInitialScaleFactor(m_viewportConfiguration.initialScale());
     layerTransaction.setViewportMetaTagWidth(m_viewportConfiguration.viewportArguments().width);
+    layerTransaction.setViewportMetaTagWidthWasExplicit(m_viewportConfiguration.viewportArguments().widthWasExplicit);
+    layerTransaction.setViewportMetaTagCameFromImageDocument(m_viewportConfiguration.viewportArguments().type == ViewportArguments::ImageDocument);
     layerTransaction.setAllowsUserScaling(allowsUserScaling());
 #endif
 #if PLATFORM(MAC)
@@ -3022,14 +3052,16 @@ WebInspectorUI* WebPage::inspectorUI()
     return m_inspectorUI.get();
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
 WebVideoFullscreenManager* WebPage::videoFullscreenManager()
 {
     if (!m_videoFullscreenManager)
         m_videoFullscreenManager = WebVideoFullscreenManager::create(this);
     return m_videoFullscreenManager.get();
 }
+#endif
 
+#if PLATFORM(IOS)
 void WebPage::setAllowsMediaDocumentInlinePlayback(bool allows)
 {
     m_page->setAllowsMediaDocumentInlinePlayback(allows);

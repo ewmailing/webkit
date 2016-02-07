@@ -46,6 +46,7 @@
 #include "InspectorIndexedDBAgent.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorLayerTreeAgent.h"
+#include "InspectorMemoryAgent.h"
 #include "InspectorNetworkAgent.h"
 #include "InspectorPageAgent.h"
 #include "InspectorReplayAgent.h"
@@ -143,6 +144,10 @@ InspectorController::InspectorController(Page& page, InspectorClient* inspectorC
 
 #if ENABLE(INDEXED_DATABASE)
     m_agents.append(std::make_unique<InspectorIndexedDBAgent>(pageContext, pageAgent));
+#endif
+
+#if ENABLE(RESOURCE_USAGE)
+    m_agents.append(std::make_unique<InspectorMemoryAgent>(pageContext));
 #endif
 
 #if ENABLE(WEB_REPLAY)
@@ -403,20 +408,23 @@ void InspectorController::setIndicating(bool indicating)
 #endif
 }
 
-bool InspectorController::profilerEnabled() const
+bool InspectorController::legacyProfilerEnabled() const
 {
-    return m_instrumentingAgents->persistentInspectorTimelineAgent();
+    return m_legacyProfilerEnabled;
 }
 
-void InspectorController::setProfilerEnabled(bool enable)
+void InspectorController::setLegacyProfilerEnabled(bool enable)
 {
-    ErrorString unused;
+    m_legacyProfilerEnabled = enable;
 
+    ErrorString unused;
     if (enable) {
         m_instrumentingAgents->setPersistentInspectorTimelineAgent(m_timelineAgent);
+        m_scriptDebugServer.recompileAllJSFunctions();
         m_timelineAgent->start(unused);
     } else {
         m_instrumentingAgents->setPersistentInspectorTimelineAgent(nullptr);
+        m_scriptDebugServer.recompileAllJSFunctions();
         m_timelineAgent->stop(unused);
     }
 }

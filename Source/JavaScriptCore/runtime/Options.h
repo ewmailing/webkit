@@ -141,11 +141,16 @@ typedef const char* optionString;
     v(bool, dumpFTLDisassembly, false, "dumps disassembly of FTL function upon compilation") \
     v(bool, dumpAllDFGNodes, false, nullptr) \
     v(optionRange, bytecodeRangeToDFGCompile, 0, "bytecode size range to allow DFG compilation on, e.g. 1:100") \
+    v(optionRange, bytecodeRangeToFTLCompile, 0, "bytecode size range to allow FTL compilation on, e.g. 1:100") \
     v(optionString, dfgWhitelist, nullptr, "file with list of function signatures to allow DFG compilation on") \
     v(bool, dumpSourceAtDFGTime, false, "dumps source code of JS function being DFG compiled") \
     v(bool, dumpBytecodeAtDFGTime, false, "dumps bytecode of JS function being DFG compiled") \
     v(bool, dumpGraphAfterParsing, false, nullptr) \
     v(bool, dumpGraphAtEachPhase, false, nullptr) \
+    v(bool, dumpDFGGraphAtEachPhase, false, "dumps the DFG graph at each phase DFG of complitaion (note this excludes DFG graphs during FTL compilation)") \
+    v(bool, dumpDFGFTLGraphAtEachPhase, false, "dumps the DFG graph at each phase DFG of complitaion when compiling FTL code") \
+    v(bool, dumpB3GraphAtEachPhase, false, "dumps the B3 graph at each phase of compilation") \
+    v(bool, dumpAirGraphAtEachPhase, false, "dumps the Air graph at each phase of compilation") \
     v(bool, verboseDFGByteCodeParsing, false, nullptr) \
     v(bool, verboseCompilation, false, nullptr) \
     v(bool, verboseFTLCompilation, false, nullptr) \
@@ -314,6 +319,7 @@ typedef const char* optionString;
     \
     v(gcLogLevel, logGC, GCLogging::None, "debugging option to log GC activity (0 = None, 1 = Basic, 2 = Verbose)") \
     v(bool, useGC, true, nullptr) \
+    v(bool, gcAtEnd, false, "If true, the jsc CLI will do a GC before exiting") \
     v(bool, forceGCSlowPaths, false, "If true, we will force all JIT fast allocations down their slow paths.")\
     v(unsigned, gcMaxHeapSize, 0, nullptr) \
     v(unsigned, forceRAMSize, 0, nullptr) \
@@ -322,6 +328,7 @@ typedef const char* optionString;
     v(bool, useTypeProfiler, false, nullptr) \
     v(bool, useControlFlowProfiler, false, nullptr) \
     v(bool, useSamplingProfiler, false, nullptr) \
+    v(bool, alwaysGeneratePCToCodeOriginMap, false, "This will make sure we always generate a PCToCodeOriginMap for JITed code.") \
     \
     v(bool, verifyHeap, false, nullptr) \
     v(unsigned, numberOfGCCyclesToRecordForVerification, 3, nullptr) \

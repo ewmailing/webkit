@@ -30,6 +30,8 @@
 
 #include "B3OpaqueByproducts.h"
 #include "B3Origin.h"
+#include "B3PCToOriginMap.h"
+#include "B3SparseCollection.h"
 #include "B3Type.h"
 #include "B3ValueKey.h"
 #include "PureNaN.h"
@@ -49,7 +51,9 @@ class BasicBlock;
 class BlockInsertionSet;
 class CFG;
 class Dominators;
+class StackSlot;
 class Value;
+class Variable;
 
 namespace Air { class Code; }
 
@@ -90,6 +94,9 @@ public:
             blocks.append(block);
         setBlockOrderImpl(blocks);
     }
+
+    JS_EXPORT_PRIVATE StackSlot* addStackSlot(unsigned byteSize);
+    JS_EXPORT_PRIVATE Variable* addVariable(Type);
     
     template<typename ValueType, typename... Arguments>
     ValueType* add(Arguments...);
@@ -172,74 +179,22 @@ public:
     Vector<BasicBlock*> blocksInPreOrder();
     Vector<BasicBlock*> blocksInPostOrder();
 
-    class ValuesCollection {
-    public:
-        ValuesCollection(const Procedure& procedure)
-            : m_procedure(procedure)
-        {
-        }
+    SparseCollection<StackSlot>& stackSlots() { return m_stackSlots; }
+    const SparseCollection<StackSlot>& stackSlots() const { return m_stackSlots; }
 
-        class iterator {
-        public:
-            iterator()
-                : m_procedure(nullptr)
-                , m_index(0)
-            {
-            }
+    // Short for stackSlots().remove(). It's better to call this method since it's out of line.
+    void deleteStackSlot(StackSlot*);
 
-            iterator(const Procedure& procedure, unsigned index)
-                : m_procedure(&procedure)
-                , m_index(findNext(index))
-            {
-            }
+    SparseCollection<Variable>& variables() { return m_variables; }
+    const SparseCollection<Variable>& variables() const { return m_variables; }
 
-            Value* operator*() const
-            {
-                return m_procedure->m_values[m_index].get();
-            }
+    // Short for variables().remove(). It's better to call this method since it's out of line.
+    void deleteVariable(Variable*);
 
-            iterator& operator++()
-            {
-                m_index = findNext(m_index + 1);
-                return *this;
-            }
+    SparseCollection<Value>& values() { return m_values; }
+    const SparseCollection<Value>& values() const { return m_values; }
 
-            bool operator==(const iterator& other) const
-            {
-                ASSERT(m_procedure == other.m_procedure);
-                return m_index == other.m_index;
-            }
-
-            bool operator!=(const iterator& other) const
-            {
-                return !(*this == other);
-            }
-
-        private:
-            unsigned findNext(unsigned index)
-            {
-                while (index < m_procedure->m_values.size() && !m_procedure->m_values[index])
-                    index++;
-                return index;
-            }
-
-            const Procedure* m_procedure;
-            unsigned m_index;
-        };
-
-        iterator begin() const { return iterator(m_procedure, 0); }
-        iterator end() const { return iterator(m_procedure, m_procedure.m_values.size()); }
-
-        unsigned size() const { return m_procedure.m_values.size(); }
-        Value* at(unsigned index) const { return m_procedure.m_values[index].get(); }
-        Value* operator[](unsigned index) const { return at(index); }
-        
-    private:
-        const Procedure& m_procedure;
-    };
-
-    ValuesCollection values() const { return ValuesCollection(*this); }
-
+    // Short for values().remove(). It's better to call this method since it's out of line.
     void deleteValue(Value*);
 
     // A valid procedure cannot contain any orphan values. An orphan is a value that is not in
@@ -287,16 +242,19 @@ public:
     JS_EXPORT_PRIVATE unsigned frameSize() const;
     const RegisterAtOffsetList& calleeSaveRegisters() const;
 
+    PCToOriginMap& pcToOriginMap() { return m_pcToOriginMap; }
+    PCToOriginMap releasePCToOriginMap() { return WTFMove(m_pcToOriginMap); }
+
 private:
     friend class BlockInsertionSet;
-    
+
+    JS_EXPORT_PRIVATE Value* addValueImpl(Value*);
     void setBlockOrderImpl(Vector<BasicBlock*>&);
 
-    JS_EXPORT_PRIVATE size_t addValueIndex();
-    
+    SparseCollection<StackSlot> m_stackSlots;
+    SparseCollection<Variable> m_variables;
     Vector<std::unique_ptr<BasicBlock>> m_blocks;
-    Vector<std::unique_ptr<Value>> m_values;
-    Vector<size_t> m_valueIndexFreeList;
+    SparseCollection<Value> m_values;
     std::unique_ptr<CFG> m_cfg;
     std::unique_ptr<Dominators> m_dominators;
     HashSet<ValueKey> m_fastConstants;
@@ -305,6 +263,7 @@ private:
     std::unique_ptr<Air::Code> m_code;
     RefPtr<SharedTask<void(PrintStream&, Origin)>> m_originPrinter;
     const void* m_frontendData;
+    PCToOriginMap m_pcToOriginMap;
 };
 
 } } // namespace JSC::B3

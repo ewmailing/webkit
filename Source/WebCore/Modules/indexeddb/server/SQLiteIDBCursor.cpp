@@ -28,6 +28,7 @@
 #if ENABLE(INDEXED_DATABASE)
 
 #include "IDBCursorInfo.h"
+#include "IDBGetResult.h"
 #include "IDBSerialization.h"
 #include "Logging.h"
 #include "SQLiteIDBTransaction.h"
@@ -68,7 +69,7 @@ SQLiteIDBCursor::SQLiteIDBCursor(SQLiteIDBTransaction& transaction, const IDBCur
     : m_transaction(&transaction)
     , m_cursorIdentifier(info.identifier())
     , m_objectStoreID(info.objectStoreIdentifier())
-    , m_indexID(info.sourceIdentifier())
+    , m_indexID(info.cursorSource() == IndexedDB::CursorSource::Index ? info.sourceIdentifier() : IDBIndexMetadata::InvalidId)
     , m_cursorDirection(info.cursorDirection())
     , m_keyRange(info.range())
 {
@@ -82,8 +83,26 @@ SQLiteIDBCursor::SQLiteIDBCursor(SQLiteIDBTransaction& transaction, const uint64
     , m_indexID(indexID ? indexID : IDBIndexMetadata::InvalidId)
     , m_cursorDirection(IndexedDB::CursorDirection::Next)
     , m_keyRange(range)
+    , m_backingStoreCursor(true)
 {
     ASSERT(m_objectStoreID);
+}
+
+SQLiteIDBCursor::~SQLiteIDBCursor()
+{
+    if (m_backingStoreCursor)
+        m_transaction->closeCursor(*this);
+}
+
+void SQLiteIDBCursor::currentData(IDBGetResult& result)
+{
+    if (m_completed) {
+        ASSERT(!m_errored);
+        result = { };
+        return;
+    }
+
+    result = { m_currentKey, m_currentPrimaryKey, ThreadSafeDataBuffer::copyVector(m_currentValueBuffer) };
 }
 
 static String buildIndexStatement(const IDBKeyRangeData& keyRange, IndexedDB::CursorDirection cursorDirection)
@@ -204,10 +223,27 @@ void SQLiteIDBCursor::resetAndRebindStatement()
 
     // Otherwise update the lower key or upper key used for the cursor range.
     // This is so the cursor can pick up where we left off.
-    if (m_cursorDirection == IndexedDB::CursorDirection::Next || m_cursorDirection == IndexedDB::CursorDirection::NextNoDuplicate)
+    // We might also have to change the statement from closed to open so we don't refetch the current key a second time.
+    if (m_cursorDirection == IndexedDB::CursorDirection::Next || m_cursorDirection == IndexedDB::CursorDirection::NextNoDuplicate) {
         m_currentLowerKey = m_currentKey;
-    else
+        if (!m_keyRange.lowerOpen) {
+            m_keyRange.lowerOpen = true;
+            m_keyRange.lowerKey = m_currentLowerKey;
+            m_statement = nullptr;
+        }
+    } else {
         m_currentUpperKey = m_currentKey;
+        if (!m_keyRange.upperOpen) {
+            m_keyRange.upperOpen = true;
+            m_keyRange.upperKey = m_currentUpperKey;
+            m_statement = nullptr;
+        }
+    }
+
+    if (!m_statement && !establishStatement()) {
+        LOG_ERROR("Unable to establish new statement for cursor iteration");
+        return;
+    }
 
     if (m_statement->reset() != SQLITE_OK) {
         LOG_ERROR("Could not reset cursor statement to respond to object store changes");
@@ -219,6 +255,8 @@ void SQLiteIDBCursor::resetAndRebindStatement()
 
 bool SQLiteIDBCursor::bindArguments()
 {
+    LOG(IndexedDB, "Cursor is binding lower key '%s' and upper key '%s'", m_currentLowerKey.loggingString().utf8().data(), m_currentUpperKey.loggingString().utf8().data());
+
     if (m_statement->bindInt64(1, m_boundID) != SQLITE_OK) {
         LOG_ERROR("Could not bind id argument (bound ID)");
         return false;
@@ -243,6 +281,11 @@ bool SQLiteIDBCursor::advance(uint64_t count)
 {
     bool isUnique = m_cursorDirection == IndexedDB::CursorDirection::NextNoDuplicate || m_cursorDirection == IndexedDB::CursorDirection::PrevNoDuplicate;
 
+    if (m_completed) {
+        LOG_ERROR("Attempt to advance a completed cursor");
+        return false;
+    }
+
     for (uint64_t i = 0; i < count; ++i) {
         if (!isUnique) {
             if (!advanceOnce())
@@ -251,6 +294,9 @@ bool SQLiteIDBCursor::advance(uint64_t count)
             if (!advanceUnique())
                 return false;
         }
+
+        if (m_completed)
+            break;
     }
 
     return true;
@@ -289,11 +335,7 @@ SQLiteIDBCursor::AdvanceResult SQLiteIDBCursor::internalAdvanceOnce()
 {
     ASSERT(m_transaction->sqliteTransaction());
     ASSERT(m_statement);
-
-    if (m_completed) {
-        LOG_ERROR("Attempt to advance a completed cursor");
-        return AdvanceResult::Failure;
-    }
+    ASSERT(!m_completed);
 
     int result = m_statement->step();
     if (result == SQLITE_DONE) {
@@ -313,16 +355,6 @@ SQLiteIDBCursor::AdvanceResult SQLiteIDBCursor::internalAdvanceOnce()
         m_errored = true;
         return AdvanceResult::Failure;
     }
-
-    int64_t recordID = m_statement->getColumnInt64(0);
-
-    // If the recordID of the record just fetched is the same as the current record ID
-    // then this statement must have been re-prepared in response to an object store change.
-    // We don't want to re-use the current record so we'll move on to the next one.
-    if (recordID == m_currentRecordID)
-        return AdvanceResult::ShouldAdvanceAgain;
-
-    m_currentRecordID = recordID;
 
     Vector<uint8_t> keyData;
     m_statement->getColumnBlobAsVector(1, keyData);

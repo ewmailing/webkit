@@ -64,6 +64,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/mathml"
     "${WEBCORE_DIR}/page"
     "${WEBCORE_DIR}/page/animation"
+    "${WEBCORE_DIR}/page/csp"
     "${WEBCORE_DIR}/page/scrolling"
     "${WEBCORE_DIR}/platform"
     "${WEBCORE_DIR}/platform/animation"
@@ -171,7 +172,9 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/battery/BatteryManager.idl
     Modules/battery/NavigatorBattery.idl
 
+    Modules/fetch/FetchBody.idl
     Modules/fetch/FetchHeaders.idl
+    Modules/fetch/FetchRequest.idl
 
     Modules/geolocation/Coordinates.idl
     Modules/geolocation/Geolocation.idl
@@ -433,7 +436,6 @@ set(WebCore_NON_SVG_IDL_FILES
     fileapi/FileReaderSync.idl
 
     html/DOMFormData.idl
-    html/DOMSettableTokenList.idl
     html/DOMTokenList.idl
     html/DOMURL.idl
     html/HTMLAllCollection.idl
@@ -449,6 +451,7 @@ set(WebCore_NON_SVG_IDL_FILES
     html/HTMLCanvasElement.idl
     html/HTMLCollection.idl
     html/HTMLDListElement.idl
+    html/HTMLDataElement.idl
     html/HTMLDataListElement.idl
     html/HTMLDetailsElement.idl
     html/HTMLDirectoryElement.idl
@@ -813,7 +816,9 @@ set(WebCore_SOURCES
     Modules/battery/BatteryStatus.cpp
     Modules/battery/NavigatorBattery.cpp
 
+    Modules/fetch/FetchBody.cpp
     Modules/fetch/FetchHeaders.cpp
+    Modules/fetch/FetchRequest.cpp
 
     Modules/geolocation/Coordinates.cpp
     Modules/geolocation/GeoNotifier.cpp
@@ -1158,6 +1163,7 @@ set(WebCore_SOURCES
     bindings/js/JSEventListener.cpp
     bindings/js/JSEventTargetCustom.cpp
     bindings/js/JSExceptionBase.cpp
+    bindings/js/JSFetchHeadersCustom.cpp
     bindings/js/JSFileReaderCustom.cpp
     bindings/js/JSGeolocationCustom.cpp
     bindings/js/JSHTMLAllCollectionCustom.cpp
@@ -1180,6 +1186,7 @@ set(WebCore_SOURCES
     bindings/js/JSHistoryCustom.cpp
     bindings/js/JSIDBAnyCustom.cpp
     bindings/js/JSIDBCursorCustom.cpp
+    bindings/js/JSIDBCursorWithValueCustom.cpp
     bindings/js/JSIDBDatabaseCustom.cpp
     bindings/js/JSIDBObjectStoreCustom.cpp
     bindings/js/JSImageConstructor.cpp
@@ -1629,7 +1636,6 @@ set(WebCore_SOURCES
     html/CheckboxInputType.cpp
     html/ColorInputType.cpp
     html/DOMFormData.cpp
-    html/DOMSettableTokenList.cpp
     html/DOMTokenList.cpp
     html/DOMURL.cpp
     html/DateInputType.cpp
@@ -1656,6 +1662,7 @@ set(WebCore_SOURCES
     html/HTMLCanvasElement.cpp
     html/HTMLCollection.cpp
     html/HTMLDListElement.cpp
+    html/HTMLDataElement.cpp
     html/HTMLDataListElement.cpp
     html/HTMLDetailsElement.cpp
     html/HTMLDirectoryElement.cpp
@@ -1882,6 +1889,7 @@ set(WebCore_SOURCES
     inspector/InspectorInstrumentation.cpp
     inspector/InspectorInstrumentationCookie.cpp
     inspector/InspectorLayerTreeAgent.cpp
+    inspector/InspectorMemoryAgent.cpp
     inspector/InspectorNetworkAgent.cpp
     inspector/InspectorNodeFinder.cpp
     inspector/InspectorOverlay.cpp
@@ -1988,7 +1996,6 @@ set(WebCore_SOURCES
     page/BarProp.cpp
     page/CaptionUserPreferences.cpp
     page/Chrome.cpp
-    page/ContentSecurityPolicy.cpp
     page/ContextMenuContext.cpp
     page/ContextMenuController.cpp
     page/Crypto.cpp
@@ -2037,7 +2044,9 @@ set(WebCore_SOURCES
     page/PerformanceUserTiming.cpp
     page/PointerLockController.cpp
     page/PrintContext.cpp
+    page/ResourceUsageData.cpp
     page/ResourceUsageOverlay.cpp
+    page/ResourceUsageThread.cpp
     page/Screen.cpp
     page/SecurityOrigin.cpp
     page/SecurityOriginData.cpp
@@ -2061,6 +2070,9 @@ set(WebCore_SOURCES
     page/animation/CompositeAnimation.cpp
     page/animation/ImplicitAnimation.cpp
     page/animation/KeyframeAnimation.cpp
+
+    page/csp/ContentSecurityPolicy.cpp
+    page/csp/ContentSecurityPolicyResponseHeaders.cpp
 
     page/scrolling/AxisScrollSnapOffsets.cpp
     page/scrolling/ScrollLatchingState.cpp
@@ -2325,6 +2337,7 @@ set(WebCore_SOURCES
     platform/network/HTTPParsers.cpp
     platform/network/MIMEHeader.cpp
     platform/network/NetworkStateNotifier.cpp
+    platform/network/ParsedContentRange.cpp
     platform/network/ParsedContentType.cpp
     platform/network/ProtectionSpaceBase.cpp
     platform/network/ProxyServer.cpp
@@ -2625,6 +2638,7 @@ set(WebCore_SOURCES
     style/StyleChange.cpp
     style/StyleFontSizeFunctions.cpp
     style/StyleResolveForDocument.cpp
+    style/StyleSharingResolver.cpp
     style/StyleTreeResolver.cpp
 
     svg/SVGAElement.cpp

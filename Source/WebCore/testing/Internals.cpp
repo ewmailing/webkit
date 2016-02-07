@@ -57,6 +57,7 @@
 #include "FormController.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
+#include "HTMLCanvasElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
@@ -355,6 +356,7 @@ void Internals::resetToConsistentState(Page* page)
 
     page->setPageScaleFactor(1, IntPoint(0, 0));
     page->setPagination(Pagination());
+    page->setPaginationLineGridEnabled(false);
 
     page->setDefersLoading(false);
     
@@ -371,10 +373,10 @@ void Internals::resetToConsistentState(Page* page)
 
     WebCore::overrideUserPreferredLanguages(Vector<String>());
     WebCore::Settings::setUsesOverlayScrollbars(false);
-    page->inspectorController().setProfilerEnabled(false);
+    page->inspectorController().setLegacyProfilerEnabled(false);
 #if ENABLE(VIDEO_TRACK)
-    page->group().captionPreferences()->setCaptionsStyleSheetOverride(emptyString());
-    page->group().captionPreferences()->setTestingMode(false);
+    page->group().captionPreferences().setCaptionsStyleSheetOverride(emptyString());
+    page->group().captionPreferences().setTestingMode(false);
 #endif
     if (!page->mainFrame().editor().isContinuousSpellCheckingEnabled())
         page->mainFrame().editor().toggleContinuousSpellChecking();
@@ -405,7 +407,7 @@ Internals::Internals(Document* document)
 {
 #if ENABLE(VIDEO_TRACK)
     if (document && document->page())
-        document->page()->group().captionPreferences()->setTestingMode(true);
+        document->page()->group().captionPreferences().setTestingMode(true);
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -1196,6 +1198,17 @@ void Internals::setPagination(const String& mode, int gap, int pageLength, Excep
     page->setPagination(pagination);
 }
 
+void Internals::setPaginationLineGridEnabled(bool enabled, ExceptionCode& ec)
+{
+    Document* document = contextDocument();
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+    Page* page = document->page();
+    page->setPaginationLineGridEnabled(enabled);
+}
+
 String Internals::configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode& ec)
 {
     Document* document = contextDocument();
@@ -1277,7 +1290,19 @@ void Internals::setAutofilled(Element* element, bool enabled, ExceptionCode& ec)
     downcast<HTMLInputElement>(*element).setAutoFilled(enabled);
 }
 
-void Internals::setShowAutoFillButton(Element* element, bool show, ExceptionCode& ec)
+static AutoFillButtonType stringToAutoFillButtonType(const String& autoFillButtonType)
+{
+    if (autoFillButtonType == "AutoFillButtonTypeNone")
+        return AutoFillButtonType::None;
+    if (autoFillButtonType == "AutoFillButtonTypeCredentials")
+        return AutoFillButtonType::Credentials;
+    if (autoFillButtonType == "AutoFillButtonTypeContacts")
+        return AutoFillButtonType::Contacts;
+    ASSERT_NOT_REACHED();
+    return AutoFillButtonType::None;
+}
+
+void Internals::setShowAutoFillButton(Element* element, const String& autoFillButtonType, ExceptionCode& ec)
 {
     if (!element) {
         ec = INVALID_ACCESS_ERR;
@@ -1289,7 +1314,7 @@ void Internals::setShowAutoFillButton(Element* element, bool show, ExceptionCode
         return;
     }
 
-    downcast<HTMLInputElement>(*element).setShowAutoFillButton(show);
+    downcast<HTMLInputElement>(*element).setShowAutoFillButton(stringToAutoFillButtonType(autoFillButtonType));
 }
 
 
@@ -1443,7 +1468,7 @@ Vector<String> Internals::userPreferredAudioCharacteristics() const
     if (!document || !document->page())
         return Vector<String>();
 #if ENABLE(VIDEO_TRACK)
-    return document->page()->group().captionPreferences()->preferredAudioCharacteristics();
+    return document->page()->group().captionPreferences().preferredAudioCharacteristics();
 #else
     return Vector<String>();
 #endif
@@ -1455,7 +1480,7 @@ void Internals::setUserPreferredAudioCharacteristic(const String& characteristic
     if (!document || !document->page())
         return;
 #if ENABLE(VIDEO_TRACK)
-    document->page()->group().captionPreferences()->setPreferredAudioCharacteristic(characteristic);
+    document->page()->group().captionPreferences().setPreferredAudioCharacteristic(characteristic);
 #else
     UNUSED_PARAM(characteristic);
 #endif
@@ -1765,6 +1790,18 @@ void Internals::setAutomaticSpellingCorrectionEnabled(bool enabled, ExceptionCod
 #endif
 }
 
+void Internals::handleAcceptedCandidate(const String& candidate, ExceptionCode&)
+{
+    if (!contextDocument() || !contextDocument()->frame())
+        return;
+
+    TextCheckingResult result;
+    result.type = TextCheckingTypeNone;
+    result.length = candidate.length();
+    result.replacement = candidate;
+    contextDocument()->frame()->editor().handleAcceptedCandidate(result);
+}
+
 bool Internals::isOverwriteModeEnabled(ExceptionCode&)
 {
     Document* document = contextDocument();
@@ -1826,7 +1863,7 @@ void Internals::closeDummyInspectorFrontend()
     m_inspectorFrontend = nullptr;
 }
 
-void Internals::setJavaScriptProfilingEnabled(bool enabled, ExceptionCode& ec)
+void Internals::setLegacyJavaScriptProfilingEnabled(bool enabled, ExceptionCode& ec)
 {
     Page* page = contextDocument()->frame()->page();
     if (!page) {
@@ -1834,7 +1871,7 @@ void Internals::setJavaScriptProfilingEnabled(bool enabled, ExceptionCode& ec)
         return;
     }
 
-    page->inspectorController().setProfilerEnabled(enabled);
+    page->inspectorController().setLegacyProfilerEnabled(enabled);
 }
 
 void Internals::setInspectorIsUnderTest(bool isUnderTest, ExceptionCode& ec)
@@ -1982,11 +2019,21 @@ void Internals::setElementUsesDisplayListDrawing(Element* element, bool usesDisp
         return;
     }
 
-    if (!element || !element->renderer() || !element->renderer()->hasLayer()) {
+    if (!element || !element->renderer()) {
         ec = INVALID_ACCESS_ERR;
         return;
     }
 
+    if (is<HTMLCanvasElement>(*element)) {
+        downcast<HTMLCanvasElement>(*element).setUsesDisplayListDrawing(usesDisplayListDrawing);
+        return;
+    }
+
+    if (!element->renderer()->hasLayer()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+    
     RenderLayer* layer = downcast<RenderLayerModelObject>(element->renderer())->layer();
     if (!layer->isComposited()) {
         ec = INVALID_ACCESS_ERR;
@@ -2004,7 +2051,17 @@ void Internals::setElementTracksDisplayListReplay(Element* element, bool isTrack
         return;
     }
 
-    if (!element || !element->renderer() || !element->renderer()->hasLayer()) {
+    if (!element || !element->renderer()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    if (is<HTMLCanvasElement>(*element)) {
+        downcast<HTMLCanvasElement>(*element).setTracksDisplayListReplay(isTrackingReplay);
+        return;
+    }
+
+    if (!element->renderer()->hasLayer()) {
         ec = INVALID_ACCESS_ERR;
         return;
     }
@@ -2031,13 +2088,7 @@ String Internals::displayListForElement(Element* element, unsigned flags, Except
         return String();
     }
 
-    if (!element || !element->renderer() || !element->renderer()->hasLayer()) {
-        ec = INVALID_ACCESS_ERR;
-        return String();
-    }
-    
-    RenderLayer* layer = downcast<RenderLayerModelObject>(element->renderer())->layer();
-    if (!layer->isComposited()) {
+    if (!element || !element->renderer()) {
         ec = INVALID_ACCESS_ERR;
         return String();
     }
@@ -2045,7 +2096,21 @@ String Internals::displayListForElement(Element* element, unsigned flags, Except
     DisplayList::AsTextFlags displayListFlags = 0;
     if (flags & DISPLAY_LIST_INCLUDES_PLATFORM_OPERATIONS)
         displayListFlags |= DisplayList::AsTextFlag::IncludesPlatformOperations;
-    
+
+    if (is<HTMLCanvasElement>(*element))
+        return downcast<HTMLCanvasElement>(*element).displayListAsText(displayListFlags);
+
+    if (!element->renderer()->hasLayer()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+
+    RenderLayer* layer = downcast<RenderLayerModelObject>(element->renderer())->layer();
+    if (!layer->isComposited()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+
     return layer->backing()->displayListAsText(displayListFlags);
 }
 
@@ -2062,13 +2127,7 @@ String Internals::replayDisplayListForElement(Element* element, unsigned flags, 
         return String();
     }
 
-    if (!element || !element->renderer() || !element->renderer()->hasLayer()) {
-        ec = INVALID_ACCESS_ERR;
-        return String();
-    }
-    
-    RenderLayer* layer = downcast<RenderLayerModelObject>(element->renderer())->layer();
-    if (!layer->isComposited()) {
+    if (!element || !element->renderer()) {
         ec = INVALID_ACCESS_ERR;
         return String();
     }
@@ -2076,7 +2135,21 @@ String Internals::replayDisplayListForElement(Element* element, unsigned flags, 
     DisplayList::AsTextFlags displayListFlags = 0;
     if (flags & DISPLAY_LIST_INCLUDES_PLATFORM_OPERATIONS)
         displayListFlags |= DisplayList::AsTextFlag::IncludesPlatformOperations;
-    
+
+    if (is<HTMLCanvasElement>(*element))
+        return downcast<HTMLCanvasElement>(*element).replayDisplayListAsText(displayListFlags);
+
+    if (!element->renderer()->hasLayer()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+
+    RenderLayer* layer = downcast<RenderLayerModelObject>(element->renderer())->layer();
+    if (!layer->isComposited()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+
     return layer->backing()->replayDisplayListAsText(displayListFlags);
 }
 
@@ -2682,7 +2755,7 @@ String Internals::captionsStyleSheetOverride(ExceptionCode& ec)
     }
 
 #if ENABLE(VIDEO_TRACK)
-    return document->page()->group().captionPreferences()->captionsStyleSheetOverride();
+    return document->page()->group().captionPreferences().captionsStyleSheetOverride();
 #else
     return emptyString();
 #endif
@@ -2697,7 +2770,7 @@ void Internals::setCaptionsStyleSheetOverride(const String& override, ExceptionC
     }
 
 #if ENABLE(VIDEO_TRACK)
-    document->page()->group().captionPreferences()->setCaptionsStyleSheetOverride(override);
+    document->page()->group().captionPreferences().setCaptionsStyleSheetOverride(override);
 #else
     UNUSED_PARAM(override);
 #endif
@@ -2712,7 +2785,7 @@ void Internals::setPrimaryAudioTrackLanguageOverride(const String& language, Exc
     }
 
 #if ENABLE(VIDEO_TRACK)
-    document->page()->group().captionPreferences()->setPrimaryAudioTrackLanguageOverride(language);
+    document->page()->group().captionPreferences().setPrimaryAudioTrackLanguageOverride(language);
 #else
     UNUSED_PARAM(language);
 #endif
@@ -2727,14 +2800,16 @@ void Internals::setCaptionDisplayMode(const String& mode, ExceptionCode& ec)
     }
     
 #if ENABLE(VIDEO_TRACK)
-    CaptionUserPreferences* captionPreferences = document->page()->group().captionPreferences();
+    auto& captionPreferences = document->page()->group().captionPreferences();
     
     if (equalLettersIgnoringASCIICase(mode, "automatic"))
-        captionPreferences->setCaptionDisplayMode(CaptionUserPreferences::Automatic);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::Automatic);
     else if (equalLettersIgnoringASCIICase(mode, "forcedonly"))
-        captionPreferences->setCaptionDisplayMode(CaptionUserPreferences::ForcedOnly);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::ForcedOnly);
     else if (equalLettersIgnoringASCIICase(mode, "alwayson"))
-        captionPreferences->setCaptionDisplayMode(CaptionUserPreferences::AlwaysOn);
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::AlwaysOn);
+    else if (equalLettersIgnoringASCIICase(mode, "manual"))
+        captionPreferences.setCaptionDisplayMode(CaptionUserPreferences::Manual);
     else
         ec = SYNTAX_ERR;
 #else

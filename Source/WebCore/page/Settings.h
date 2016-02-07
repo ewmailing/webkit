@@ -146,21 +146,6 @@ public:
     WEBCORE_EXPORT void setPluginsEnabled(bool);
     bool arePluginsEnabled() const { return m_arePluginsEnabled; }
 
-    // When this option is set, WebCore will avoid storing any record of browsing activity
-    // that may persist on disk or remain displayed when the option is reset.
-    // This option does not affect the storage of such information in RAM.
-    // The following functions respect this setting:
-    //  - HTML5/DOM Storage
-    //  - Icon Database
-    //  - Console Messages
-    //  - MemoryCache
-    //  - Application Cache
-    //  - Back/Forward Page History
-    //  - Page Search Results
-    //  - HTTP Cookies
-    //  - Plug-ins (that support NPNVprivateModeBool)
-    void setPrivateBrowsingEnabled(bool);
-
     WEBCORE_EXPORT void setDNSPrefetchingEnabled(bool);
     bool dnsPrefetchingEnabled() const { return m_dnsPrefetchingEnabled; }
 
@@ -193,7 +178,7 @@ public:
     WEBCORE_EXPORT void setShowTiledScrollingIndicator(bool);
     bool showTiledScrollingIndicator() const { return m_showTiledScrollingIndicator; }
 
-#if ENABLE(RESOURCE_USAGE_OVERLAY)
+#if ENABLE(RESOURCE_USAGE)
     bool resourceUsageOverlayVisible() const { return m_resourceUsageOverlayVisible; }
     WEBCORE_EXPORT void setResourceUsageOverlayVisible(bool);
 #endif
@@ -352,7 +337,7 @@ private:
 
     bool m_forcePendingWebGLPolicy : 1;
 
-#if ENABLE(RESOURCE_USAGE_OVERLAY)
+#if ENABLE(RESOURCE_USAGE)
     bool m_resourceUsageOverlayVisible { false };
 #endif
 

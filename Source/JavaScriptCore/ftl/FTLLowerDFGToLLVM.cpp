@@ -207,9 +207,9 @@ public:
 
 #if FTL_USES_B3
         size_t sizeOfCaptured = sizeof(JSValue) * m_graph.m_nextMachineLocal;
-        B3::StackSlotValue* capturedBase = m_out.lockedStackSlot(sizeOfCaptured);
+        B3::SlotBaseValue* capturedBase = m_out.lockedStackSlot(sizeOfCaptured);
         m_captured = m_out.add(capturedBase, m_out.constIntPtr(sizeOfCaptured));
-        state->capturedValue = capturedBase;
+        state->capturedValue = capturedBase->slot();
 #else // FTL_USES_B3
         LValue capturedAlloca = m_out.alloca(arrayType(m_out.int64, m_graph.m_nextMachineLocal));
         
@@ -5186,6 +5186,7 @@ private:
         patchpoint->setGenerator(
             [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
                 AllowMacroScratchRegisterUsage allowScratch(jit);
+                CallSiteIndex callSiteIndex = state->jitCode->common.addUniqueCallSiteIndex(codeOrigin);
 
                 CallFrameShuffleData shuffleData;
                 shuffleData.numLocals = state->jitCode->common.frameRegisterCount;
@@ -5209,6 +5210,13 @@ private:
                 CCallHelpers::Call fastCall = jit.nearTailCall();
 
                 slowPath.link(&jit);
+
+                // Yes, this is really necessary. You could throw an exception in a host call on the
+                // slow path. That'll route us to lookupExceptionHandler(), which unwinds starting
+                // with the call site index of our frame. Bad things happen if it's not set.
+                jit.store32(
+                    CCallHelpers::TrustedImm32(callSiteIndex.bits()),
+                    CCallHelpers::tagFor(VirtualRegister(JSStack::ArgumentCount)));
 
                 CallFrameShuffler slowPathShuffler(jit, shuffleData);
                 slowPathShuffler.setCalleeJSValueRegs(JSValueRegs(GPRInfo::regT0));
@@ -5487,6 +5495,7 @@ private:
                 CCallHelpers::Jump done;
                 
                 if (isTailCall) {
+                    jit.emitRestoreCalleeSaves();
                     jit.prepareForTailCallSlow();
                     fastCall = jit.nearTailCall();
                 } else {
@@ -5495,7 +5504,9 @@ private:
                 }
                 
                 slowPath.link(&jit);
-                
+
+                if (isTailCall)
+                    jit.emitRestoreCalleeSaves();
                 jit.move(CCallHelpers::TrustedImmPtr(callLinkInfo), GPRInfo::regT2);
                 CCallHelpers::Call slowCall = jit.nearCall();
                 
@@ -5958,8 +5969,8 @@ private:
 
         // Set some obvious things.
         patchpoint->effects.terminal = false;
-        patchpoint->effects.writesSSAState = false;
-        patchpoint->effects.readsSSAState = false;
+        patchpoint->effects.writesLocalState = false;
+        patchpoint->effects.readsLocalState = false;
         
         // This is how we tell B3 about the possibility of jump replacement.
         patchpoint->effects.exitsSideways = true;
@@ -10183,7 +10194,7 @@ private:
             bool exitOK = true;
             bool isExceptionHandler = true;
             appendOSRExit(
-                Uncountable, noValue(), nullptr, hadException,
+                ExceptionCheck, noValue(), nullptr, hadException,
                 m_origin.withForExitAndExitOK(opCatchOrigin, exitOK), isExceptionHandler);
             return;
         }
@@ -10241,7 +10252,22 @@ private:
         if (!willCatchException)
             return;
 
-        appendOSRExitDescriptor(Uncountable, exceptionType, noValue(), nullptr, m_origin.withForExitAndExitOK(opCatchOrigin, true));
+        ExitKind exitKind;
+        switch (exceptionType) {
+        case ExceptionType::JSCall:
+        case ExceptionType::GetById:
+        case ExceptionType::PutById:
+            exitKind = GenericUnwind;
+            break;
+        case ExceptionType::LazySlowPath:
+        case ExceptionType::BinaryOpGenerator:
+            exitKind = ExceptionCheck;
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+
+        appendOSRExitDescriptor(exitKind, exceptionType, noValue(), nullptr, m_origin.withForExitAndExitOK(opCatchOrigin, true));
         OSRExitDescriptor* exitDescriptor = &m_ftlState.jitCode->osrExitDescriptors.last();
         exitDescriptor->m_stackmapID = m_stackmapIDs - 1;
 
@@ -10317,7 +10343,7 @@ private:
 
 #if FTL_USES_B3
         blessSpeculation(
-            m_out.speculate(failCondition), kind, lowValue, highValue, origin, isExceptionHandler);
+            m_out.speculate(failCondition), kind, lowValue, highValue, origin);
 #else // FTL_USES_B3
         OSRExitDescriptor* exitDescriptor = appendOSRExitDescriptor(kind, isExceptionHandler ? ExceptionType::CCallException : ExceptionType::None, lowValue, highValue, origin);
 
@@ -10345,7 +10371,7 @@ private:
     }
 
 #if FTL_USES_B3
-    void blessSpeculation(CheckValue* value, ExitKind kind, FormattedValue lowValue, Node* highValue, NodeOrigin origin, bool isExceptionHandler = false)
+    void blessSpeculation(CheckValue* value, ExitKind kind, FormattedValue lowValue, Node* highValue, NodeOrigin origin)
     {
         OSRExitDescriptor* exitDescriptor = appendOSRExitDescriptor(lowValue, highValue);
         
@@ -10355,7 +10381,7 @@ private:
         value->setGenerator(
             [=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
                 exitDescriptor->emitOSRExit(
-                    *state, kind, origin, jit, params, 0, isExceptionHandler);
+                    *state, kind, origin, jit, params, 0);
             });
     }
 #endif

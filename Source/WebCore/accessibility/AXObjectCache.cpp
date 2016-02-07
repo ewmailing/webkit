@@ -995,6 +995,9 @@ void AXObjectCache::showIntent(const AXTextStateChangeIntent &intent)
     case AXTextStateChangeTypeSelectionExtend:
         dataLog("Extend::");
         break;
+    case AXTextStateChangeTypeSelectionBoundary:
+        dataLog("Boundary::");
+        break;
     }
     switch (intent.type) {
     case AXTextStateChangeTypeUnknown:
@@ -1029,6 +1032,7 @@ void AXObjectCache::showIntent(const AXTextStateChangeIntent &intent)
         break;
     case AXTextStateChangeTypeSelectionMove:
     case AXTextStateChangeTypeSelectionExtend:
+    case AXTextStateChangeTypeSelectionBoundary:
         switch (intent.selection.direction) {
         case AXTextSelectionDirectionUnknown:
             dataLog("Unknown::");
@@ -1749,9 +1753,15 @@ CharacterOffset AXObjectCache::characterOffsetFromVisiblePosition(AccessibilityO
     int characterOffset = 0;
     Position vpDeepPos = vp.deepEquivalent();
     
+    VisiblePosition previousVisiblePos;
     while (!vpDeepPos.isNull() && !deepPos.equals(vpDeepPos)) {
+        previousVisiblePos = vp;
         vp = obj->nextVisiblePosition(vp);
         vpDeepPos = vp.deepEquivalent();
+        // Sometimes nextVisiblePosition will give the same VisiblePostion,
+        // we break here to avoid infinite loop.
+        if (vpDeepPos.equals(previousVisiblePos.deepEquivalent()))
+            break;
         characterOffset++;
     }
     

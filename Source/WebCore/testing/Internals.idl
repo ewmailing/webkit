@@ -57,6 +57,12 @@ enum MediaControlEvent {
     "previous-track"
 };
 
+enum AutoFillButtonType {
+    "AutoFillButtonTypeNone",
+    "AutoFillButtonTypeContacts",
+    "AutoFillButtonTypeCredentials"
+};
+
 [
     NoInterfaceObject,
 ] interface Internals {
@@ -140,6 +146,7 @@ enum MediaControlEvent {
     [RaisesException] void setViewBaseBackgroundColor(DOMString colorValue);
 
     [RaisesException] void setPagination(DOMString mode, long gap, optional long pageLength);
+    [RaisesException] void setPaginationLineGridEnabled(boolean enabled);
 
     [RaisesException] DOMString configurationForViewport(unrestricted float devicePixelRatio,
                                        long deviceWidth,
@@ -151,7 +158,7 @@ enum MediaControlEvent {
     [RaisesException] boolean elementShouldAutoComplete(Element inputElement);
     [RaisesException] void setEditingValue(Element inputElement, DOMString value);
     [RaisesException] void setAutofilled(Element inputElement, boolean enabled);
-    [RaisesException] void setShowAutoFillButton(Element inputElement, boolean enabled);
+    [RaisesException] void setShowAutoFillButton(Element inputElement, AutoFillButtonType autoFillButtonType);
     [RaisesException] unsigned long countMatchesForText(DOMString text, unsigned long findOptions, DOMString markMatches);
 
     [RaisesException] void paintControlTints();
@@ -197,6 +204,8 @@ enum MediaControlEvent {
     [RaisesException] void setAutomaticDashSubstitutionEnabled(boolean enabled);
     [RaisesException] void setAutomaticTextReplacementEnabled(boolean enabled);
     [RaisesException] void setAutomaticSpellingCorrectionEnabled(boolean enabled);
+
+    [RaisesException] void handleAcceptedCandidate(DOMString candidate);
 
     [RaisesException] boolean isOverwriteModeEnabled();
     [RaisesException] void toggleOverwriteModeEnabled();
@@ -257,7 +266,7 @@ enum MediaControlEvent {
     unsigned long numberOfLiveDocuments();
     DOMWindow openDummyInspectorFrontend(DOMString url);
     void closeDummyInspectorFrontend();
-    [RaisesException] void setJavaScriptProfilingEnabled(boolean creates);
+    [RaisesException] void setLegacyJavaScriptProfilingEnabled(boolean enabled);
     [RaisesException] void setInspectorIsUnderTest(boolean isUnderTest);
 
     DOMString counterValue(Element element);

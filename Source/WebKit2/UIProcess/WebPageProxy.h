@@ -122,6 +122,10 @@ OBJC_CLASS _WKRemoteObjectRegistry;
 #include <WebCore/WebMediaSessionManagerClient.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WebPageProxyIncludes.h>
+#endif
+
 #if ENABLE(MEDIA_SESSION)
 namespace WebCore {
 class MediaSessionMetadata;
@@ -292,6 +296,10 @@ public:
 
     WebsiteDataStore& websiteDataStore() { return m_websiteDataStore; }
 
+#if ENABLE(DATA_DETECTION)
+    NSArray *dataDetectionResults() { return m_dataDetectionResults.get(); }
+#endif
+        
 #if ENABLE(ASYNC_SCROLLING)
     RemoteScrollingCoordinatorProxy* scrollingCoordinatorProxy() const { return m_scrollingCoordinatorProxy.get(); }
 #endif
@@ -321,9 +329,11 @@ public:
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenManagerProxy* fullScreenManager();
 #endif
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     RefPtr<WebVideoFullscreenManagerProxy> videoFullscreenManager();
+#endif
 
+#if PLATFORM(IOS)
     bool allowsMediaDocumentInlinePlayback() const;
     void setAllowsMediaDocumentInlinePlayback(bool);
 #endif
@@ -513,7 +523,9 @@ public:
     void contentSizeCategoryDidChange(const String& contentSizeCategory);
     void getLookupContextAtPoint(const WebCore::IntPoint&, std::function<void(const String&, CallbackBase::Error)>);
 #endif
-
+#if ENABLE(DATA_DETECTION)
+    void setDataDetectionResult(const DataDetectionResult&);
+#endif
     void didCommitLayerTree(const WebKit::RemoteLayerTreeTransaction&);
 
 #if USE(COORDINATED_GRAPHICS_MULTIPROCESS)
@@ -701,6 +713,8 @@ public:
     double pageLength() const { return m_pageLength; }
     void setGapBetweenPages(double);
     double gapBetweenPages() const { return m_gapBetweenPages; }
+    void setPaginationLineGridEnabled(bool);
+    bool paginationLineGridEnabled() const { return m_paginationLineGridEnabled; }
     unsigned pageCount() const { return m_pageCount; }
 
 #if PLATFORM(COCOA)
@@ -1404,6 +1418,10 @@ private:
     void disableInspectorNodeSearch();
 #endif // PLATFORM(IOS)
 
+#if ENABLE(DATA_DETECTION)
+    RetainPtr<NSArray> m_dataDetectionResults;
+#endif
+
     void clearLoadDependentCallbacks();
 
     void performDragControllerAction(DragControllerAction, WebCore::DragData&, const String& dragStorageName, const SandboxExtension::Handle&, const SandboxExtension::HandleArray&);
@@ -1521,8 +1539,10 @@ private:
 #if ENABLE(FULLSCREEN_API)
     RefPtr<WebFullScreenManagerProxy> m_fullScreenManager;
 #endif
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     RefPtr<WebVideoFullscreenManagerProxy> m_videoFullscreenManager;
+#endif
+#if PLATFORM(IOS)
     VisibleContentRectUpdateInfo m_lastVisibleContentRectUpdate;
     bool m_hasReceivedLayerTreeTransactionAfterDidCommitLoad;
     uint64_t m_firstLayerTreeTransactionIdAfterDidCommitLoad;
@@ -1537,6 +1557,10 @@ private:
 
 #if ENABLE(VIBRATION)
     RefPtr<WebVibrationProxy> m_vibration;
+#endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WebPageProxyMembers.h>
 #endif
 
     CallbackMap m_callbacks;
@@ -1604,7 +1628,8 @@ private:
     bool m_paginationBehavesLikeColumns;
     double m_pageLength;
     double m_gapBetweenPages;
-
+    bool m_paginationLineGridEnabled;
+        
     // If the process backing the web page is alive and kicking.
     bool m_isValid;
 

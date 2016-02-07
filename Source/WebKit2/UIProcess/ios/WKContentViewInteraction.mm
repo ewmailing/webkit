@@ -34,7 +34,6 @@
 #import "ManagedConfigurationSPI.h"
 #import "NativeWebKeyboardEvent.h"
 #import "NativeWebTouchEvent.h"
-#import "SafariServicesSPI.h"
 #import "SmartMagnificationController.h"
 #import "TextInputSPI.h"
 #import "UIKitSPI.h"
@@ -434,6 +433,7 @@ static UIWebSelectionMode toUIWebSelectionMode(WKSelectionGranularity granularit
 {
     _doubleTapGestureRecognizer = adoptNS([[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(_doubleTapRecognized:)]);
     [_doubleTapGestureRecognizer setNumberOfTapsRequired:2];
+    [_doubleTapGestureRecognizer setAllowedTouchTypes:@[@(UITouchTypeDirect)]];
     [_doubleTapGestureRecognizer setDelegate:self];
     [self addGestureRecognizer:_doubleTapGestureRecognizer.get()];
     [_singleTapGestureRecognizer requireOtherGestureToFail:_doubleTapGestureRecognizer.get()];
@@ -669,6 +669,8 @@ static UIWebSelectionMode toUIWebSelectionMode(WKSelectionGranularity granularit
 
 - (BOOL)canBecomeFirstResponder
 {
+    if (_resigningFirstResponder)
+        return NO;
     // We might want to return something else
     // if we decide to enable/disable interaction programmatically.
     return YES;
@@ -676,6 +678,8 @@ static UIWebSelectionMode toUIWebSelectionMode(WKSelectionGranularity granularit
 
 - (BOOL)becomeFirstResponder
 {
+    if (_resigningFirstResponder)
+        return NO;
     BOOL didBecomeFirstResponder = [super becomeFirstResponder];
     if (didBecomeFirstResponder)
         [_textSelectionAssistant activateSelection];
@@ -688,6 +692,8 @@ static UIWebSelectionMode toUIWebSelectionMode(WKSelectionGranularity granularit
     // FIXME: Maybe we should call resignFirstResponder on the superclass
     // and do nothing if the return value is NO.
 
+    _resigningFirstResponder = YES;
+
     if (!_webView->_activeFocusedStateRetainCount) {
         // We need to complete the editing operation before we blur the element.
         [_inputPeripheral endEditing];
@@ -698,7 +704,11 @@ static UIWebSelectionMode toUIWebSelectionMode(WKSelectionGranularity granularit
     [_webSelectionAssistant resignedFirstResponder];
     [_textSelectionAssistant deactivateSelection];
 
-    return [super resignFirstResponder];
+    bool superDidResign = [super resignFirstResponder];
+
+    _resigningFirstResponder = NO;
+
+    return superDidResign;
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -1090,6 +1100,13 @@ static inline bool isSamePair(UIGestureRecognizer *a, UIGestureRecognizer *b, UI
     }
 }
 
+#if ENABLE(DATA_DETECTION)
+- (NSArray *)_dataDetectionResults
+{
+    return _page->dataDetectionResults();
+}
+#endif
+
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
 {
     CGPoint point = [gestureRecognizer locationInView:self];
@@ -1315,7 +1332,8 @@ static void cancelPotentialTapIfNecessary(WKContentView* contentView)
     // We don't want to clear the selection if it is in editable content.
     // The selection could have been set by autofocusing on page load and not
     // reflected in the UI process since the user was not interacting with the page.
-    if (!_page->editorState().isContentEditable)
+    UITouch *touch = [gestureRecognizer.touches lastObject];
+    if (!_page->editorState().isContentEditable && touch.type == UITouchTypeDirect)
         [_webSelectionAssistant clearSelection];
 
     _lastInteractionLocation = gestureRecognizer.location;
@@ -1383,6 +1401,14 @@ static void cancelPotentialTapIfNecessary(WKContentView* contentView)
 - (void)clearSelection
 {
     _page->clearSelection();
+}
+
+- (void)_didNotHandleTapAsClick:(const WebCore::IntPoint&)point
+{
+    // FIXME: we should also take into account whether or not the UI delegate
+    // has handled this notification.
+    if (_hasValidPositionInformation && point == _positionInformation.point && _positionInformation.isDataDetectorLink)
+        [self _showDataDetectorsSheet];
 }
 
 - (void)_positionInformationDidChange:(const InteractionInformationAtPosition&)info
@@ -2843,8 +2869,21 @@ static UITextAutocapitalizationType toUITextAutocapitalize(WebAutocapitalizeType
     _page->handleKeyboardEvent(NativeWebKeyboardEvent(theEvent));
 }
 
+- (void)handleKeyWebEvent:(WebIOSEvent *)theEvent withCompletionHandler:(void (^)(WebIOSEvent *theEvent, BOOL wasHandled))completionHandler
+{
+    _keyWebEventHandler = [completionHandler copy];
+    _page->handleKeyboardEvent(NativeWebKeyboardEvent(theEvent));
+}
+
 - (void)_didHandleKeyEvent:(WebIOSEvent *)event eventWasHandled:(BOOL)eventWasHandled
 {
+    if (_keyWebEventHandler) {
+        _keyWebEventHandler(event, eventWasHandled);
+        [_keyWebEventHandler release];
+        _keyWebEventHandler = nil;
+        return;
+    }
+        
     if (event.type == WebEventKeyDown) {
         // FIXME: This is only for staging purposes.
         if ([[UIKeyboardImpl sharedInstance] respondsToSelector:@selector(didHandleWebKeyEvent:)])

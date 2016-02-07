@@ -72,6 +72,7 @@ void setJSTestTypedefsStringAttrWithGetterException(JSC::ExecState*, JSC::JSObje
 JSC::EncodedJSValue jsTestTypedefsStringAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 void setJSTestTypedefsStringAttrWithSetterException(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 JSC::EncodedJSValue jsTestTypedefsConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestTypedefsConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 
 class JSTestTypedefsPrototype : public JSC::JSNonFinalObject {
 public:
@@ -150,7 +151,7 @@ template<> const ClassInfo JSTestTypedefsConstructor::s_info = { "TestTypedefsCo
 
 static const HashTableValue JSTestTypedefsPrototypeTableValues[] =
 {
-    { "constructor", DontEnum | ReadOnly, NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestTypedefsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor", DontEnum, NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestTypedefsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(setJSTestTypedefsConstructor) } },
     { "unsignedLongLongAttr", CustomAccessor, NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestTypedefsUnsignedLongLongAttr), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(setJSTestTypedefsUnsignedLongLongAttr) } },
     { "immutableSerializedScriptValue", CustomAccessor, NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestTypedefsImmutableSerializedScriptValue), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(setJSTestTypedefsImmutableSerializedScriptValue) } },
     { "attrWithGetterException", CustomAccessor, NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestTypedefsAttrWithGetterException), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(setJSTestTypedefsAttrWithGetterException) } },
@@ -216,8 +217,6 @@ EncodedJSValue jsTestTypedefsUnsignedLongLongAttr(ExecState* state, JSObject* sl
     UNUSED_PARAM(thisValue);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(slotBase))
-            return reportDeprecatedGetterError(*state, "TestTypedefs", "unsignedLongLongAttr");
         return throwGetterTypeError(*state, "TestTypedefs", "unsignedLongLongAttr");
     }
     auto& impl = castedThis->wrapped();
@@ -233,8 +232,6 @@ EncodedJSValue jsTestTypedefsImmutableSerializedScriptValue(ExecState* state, JS
     UNUSED_PARAM(thisValue);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(slotBase))
-            return reportDeprecatedGetterError(*state, "TestTypedefs", "immutableSerializedScriptValue");
         return throwGetterTypeError(*state, "TestTypedefs", "immutableSerializedScriptValue");
     }
     auto& impl = castedThis->wrapped();
@@ -248,7 +245,10 @@ EncodedJSValue jsTestTypedefsConstructorTestSubObj(ExecState* state, JSObject* s
     UNUSED_PARAM(state);
     UNUSED_PARAM(slotBase);
     UNUSED_PARAM(thisValue);
-    auto* castedThis = jsCast<JSTestTypedefs*>(slotBase);
+    JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
+    if (UNLIKELY(!castedThis)) {
+        return throwGetterTypeError(*state, "TestTypedefs", "TestSubObj");
+    }
     return JSValue::encode(JSTestSubObj::getConstructor(state->vm(), castedThis->globalObject()));
 }
 
@@ -260,8 +260,6 @@ EncodedJSValue jsTestTypedefsAttrWithGetterException(ExecState* state, JSObject*
     UNUSED_PARAM(thisValue);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(slotBase))
-            return reportDeprecatedGetterError(*state, "TestTypedefs", "attrWithGetterException");
         return throwGetterTypeError(*state, "TestTypedefs", "attrWithGetterException");
     }
     ExceptionCode ec = 0;
@@ -279,8 +277,6 @@ EncodedJSValue jsTestTypedefsAttrWithSetterException(ExecState* state, JSObject*
     UNUSED_PARAM(thisValue);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(slotBase))
-            return reportDeprecatedGetterError(*state, "TestTypedefs", "attrWithSetterException");
         return throwGetterTypeError(*state, "TestTypedefs", "attrWithSetterException");
     }
     auto& impl = castedThis->wrapped();
@@ -296,8 +292,6 @@ EncodedJSValue jsTestTypedefsStringAttrWithGetterException(ExecState* state, JSO
     UNUSED_PARAM(thisValue);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(slotBase))
-            return reportDeprecatedGetterError(*state, "TestTypedefs", "stringAttrWithGetterException");
         return throwGetterTypeError(*state, "TestTypedefs", "stringAttrWithGetterException");
     }
     ExceptionCode ec = 0;
@@ -315,8 +309,6 @@ EncodedJSValue jsTestTypedefsStringAttrWithSetterException(ExecState* state, JSO
     UNUSED_PARAM(thisValue);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(slotBase))
-            return reportDeprecatedGetterError(*state, "TestTypedefs", "stringAttrWithSetterException");
         return throwGetterTypeError(*state, "TestTypedefs", "stringAttrWithSetterException");
     }
     auto& impl = castedThis->wrapped();
@@ -333,16 +325,26 @@ EncodedJSValue jsTestTypedefsConstructor(ExecState* state, JSObject* baseValue, 
     return JSValue::encode(JSTestTypedefs::getConstructor(state->vm(), domObject->globalObject()));
 }
 
+void setJSTestTypedefsConstructor(ExecState* state, JSObject* baseValue, EncodedJSValue thisValue, EncodedJSValue encodedValue)
+{
+    JSValue value = JSValue::decode(encodedValue);
+    UNUSED_PARAM(thisValue);
+    JSTestTypedefsPrototype* domObject = jsDynamicCast<JSTestTypedefsPrototype*>(baseValue);
+    if (UNLIKELY(!domObject)) {
+        throwVMTypeError(state);
+        return;
+    }
+    // Shadowing a built-in constructor
+    domObject->putDirect(state->vm(), state->propertyNames().constructor, value);
+}
+
 void setJSTestTypedefsUnsignedLongLongAttr(ExecState* state, JSObject* baseObject, EncodedJSValue thisValue, EncodedJSValue encodedValue)
 {
     JSValue value = JSValue::decode(encodedValue);
     UNUSED_PARAM(baseObject);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(JSValue::decode(thisValue)))
-            reportDeprecatedSetterError(*state, "TestTypedefs", "unsignedLongLongAttr");
-        else
-            throwSetterTypeError(*state, "TestTypedefs", "unsignedLongLongAttr");
+        throwSetterTypeError(*state, "TestTypedefs", "unsignedLongLongAttr");
         return;
     }
     auto& impl = castedThis->wrapped();
@@ -359,10 +361,7 @@ void setJSTestTypedefsImmutableSerializedScriptValue(ExecState* state, JSObject*
     UNUSED_PARAM(baseObject);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(JSValue::decode(thisValue)))
-            reportDeprecatedSetterError(*state, "TestTypedefs", "immutableSerializedScriptValue");
-        else
-            throwSetterTypeError(*state, "TestTypedefs", "immutableSerializedScriptValue");
+        throwSetterTypeError(*state, "TestTypedefs", "immutableSerializedScriptValue");
         return;
     }
     auto& impl = castedThis->wrapped();
@@ -379,10 +378,7 @@ void setJSTestTypedefsAttrWithGetterException(ExecState* state, JSObject* baseOb
     UNUSED_PARAM(baseObject);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(JSValue::decode(thisValue)))
-            reportDeprecatedSetterError(*state, "TestTypedefs", "attrWithGetterException");
-        else
-            throwSetterTypeError(*state, "TestTypedefs", "attrWithGetterException");
+        throwSetterTypeError(*state, "TestTypedefs", "attrWithGetterException");
         return;
     }
     auto& impl = castedThis->wrapped();
@@ -399,10 +395,7 @@ void setJSTestTypedefsAttrWithSetterException(ExecState* state, JSObject* baseOb
     UNUSED_PARAM(baseObject);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(JSValue::decode(thisValue)))
-            reportDeprecatedSetterError(*state, "TestTypedefs", "attrWithSetterException");
-        else
-            throwSetterTypeError(*state, "TestTypedefs", "attrWithSetterException");
+        throwSetterTypeError(*state, "TestTypedefs", "attrWithSetterException");
         return;
     }
     auto& impl = castedThis->wrapped();
@@ -421,10 +414,7 @@ void setJSTestTypedefsStringAttrWithGetterException(ExecState* state, JSObject* 
     UNUSED_PARAM(baseObject);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(JSValue::decode(thisValue)))
-            reportDeprecatedSetterError(*state, "TestTypedefs", "stringAttrWithGetterException");
-        else
-            throwSetterTypeError(*state, "TestTypedefs", "stringAttrWithGetterException");
+        throwSetterTypeError(*state, "TestTypedefs", "stringAttrWithGetterException");
         return;
     }
     auto& impl = castedThis->wrapped();
@@ -441,10 +431,7 @@ void setJSTestTypedefsStringAttrWithSetterException(ExecState* state, JSObject* 
     UNUSED_PARAM(baseObject);
     JSTestTypedefs* castedThis = jsDynamicCast<JSTestTypedefs*>(JSValue::decode(thisValue));
     if (UNLIKELY(!castedThis)) {
-        if (jsDynamicCast<JSTestTypedefsPrototype*>(JSValue::decode(thisValue)))
-            reportDeprecatedSetterError(*state, "TestTypedefs", "stringAttrWithSetterException");
-        else
-            throwSetterTypeError(*state, "TestTypedefs", "stringAttrWithSetterException");
+        throwSetterTypeError(*state, "TestTypedefs", "stringAttrWithSetterException");
         return;
     }
     auto& impl = castedThis->wrapped();

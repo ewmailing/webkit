@@ -39,6 +39,7 @@
 #include "B3CCallValue.h"
 #include "B3CheckSpecial.h"
 #include "B3Commutativity.h"
+#include "B3Dominators.h"
 #include "B3IndexMap.h"
 #include "B3IndexSet.h"
 #include "B3MemoryValue.h"
@@ -47,10 +48,13 @@
 #include "B3PhaseScope.h"
 #include "B3PhiChildren.h"
 #include "B3Procedure.h"
-#include "B3StackSlotValue.h"
+#include "B3SlotBaseValue.h"
+#include "B3StackSlot.h"
 #include "B3UpsilonValue.h"
 #include "B3UseCounts.h"
 #include "B3ValueInlines.h"
+#include "B3Variable.h"
+#include "B3VariableValue.h"
 #include <wtf/ListDump.h>
 
 #if COMPILER(GCC) && ASSERT_DISABLED
@@ -74,6 +78,7 @@ public:
         , m_blockToBlock(procedure.size())
         , m_useCounts(procedure)
         , m_phiChildren(procedure)
+        , m_dominators(procedure.dominators())
         , m_procedure(procedure)
         , m_code(procedure.code())
     {
@@ -92,15 +97,15 @@ public:
                     dataLog("Phi tmp for ", *value, ": ", m_phiToTmp[value], "\n");
                 break;
             }
-            case B3::StackSlot: {
-                StackSlotValue* stackSlotValue = value->as<StackSlotValue>();
-                m_stackToStack.add(stackSlotValue, m_code.addStackSlot(stackSlotValue));
-                break;
-            }
             default:
                 break;
             }
         }
+
+        for (B3::StackSlot* stack : m_procedure.stackSlots())
+            m_stackToStack.add(stack, m_code.addStackSlot(stack));
+        for (Variable* variable : m_procedure.variables())
+            m_variableToTmp.add(variable, m_code.newTmp(Arg::typeForB3Type(variable->type())));
 
         // Figure out which blocks are not rare.
         m_fastWorklist.push(m_procedure[0]);
@@ -303,6 +308,10 @@ private:
         if (!tmp) {
             while (shouldCopyPropagate(value))
                 value = value->child(0);
+
+            if (value->opcode() == FramePointer)
+                return Tmp(GPRInfo::callFrameRegister);
+
             Tmp& realTmp = m_valueToTmp[value];
             if (!realTmp) {
                 realTmp = m_code.newTmp(Arg::typeForB3Type(value->type()));
@@ -433,8 +442,8 @@ private:
         case FramePointer:
             return Arg::addr(Tmp(GPRInfo::callFrameRegister), offset);
 
-        case B3::StackSlot:
-            return Arg::stack(m_stackToStack.get(address->as<StackSlotValue>()), offset);
+        case SlotBase:
+            return Arg::stack(m_stackToStack.get(address->as<SlotBaseValue>()->slot()), offset);
 
         default:
             return fallback();
@@ -584,18 +593,31 @@ private:
         // - A child might be a candidate for coalescing with this value.
         //
         // Currently, we have machinery in place to recognize super obvious forms of the latter issue.
-
-        bool result = m_useCounts.numUsingInstructions(right) == 1;
         
         // We recognize when a child is a Phi that has this value as one of its children. We're very
         // conservative about this; for example we don't even consider transitive Phi children.
         bool leftIsPhiWithThis = m_phiChildren[left].transitivelyUses(m_value);
         bool rightIsPhiWithThis = m_phiChildren[right].transitivelyUses(m_value);
-        
-        if (leftIsPhiWithThis != rightIsPhiWithThis)
-            result = rightIsPhiWithThis;
 
-        return result;
+        if (leftIsPhiWithThis != rightIsPhiWithThis)
+            return rightIsPhiWithThis;
+
+        if (m_useCounts.numUsingInstructions(right) != 1)
+            return false;
+        
+        if (m_useCounts.numUsingInstructions(left) != 1)
+            return true;
+
+        // The use count might be 1 if the variable is live around a loop. We can guarantee that we
+        // pick the the variable that is least likely to suffer this problem if we pick the one that
+        // is closest to us in an idom walk. By convention, we slightly bias this in favor of
+        // returning true.
+
+        // We cannot prefer right if right is further away in an idom walk.
+        if (m_dominators.strictlyDominates(right->owner, left->owner))
+            return false;
+
+        return true;
     }
 
     template<Air::Opcode opcode32, Air::Opcode opcode64, Air::Opcode opcodeDouble, Air::Opcode opcodeFloat, Commutativity commutativity = NotCommutative>
@@ -841,8 +863,25 @@ private:
         switch (type) {
         case Int32:
         case Int64:
+            // For Int32, we could return Move or Move32. It's a trade-off.
+            //
+            // Move32: Using Move32 guarantees that we use the narrower move, but in cases where the
+            //     register allocator can't prove that the variables involved are 32-bit, this will
+            //     disable coalescing.
+            //
+            // Move: Using Move guarantees that the register allocator can coalesce normally, but in
+            //     cases where it can't prove that the variables are 32-bit and it doesn't coalesce,
+            //     this will force us to use a full 64-bit Move instead of the slightly cheaper
+            //     32-bit Move32.
+            //
+            // Coalescing is a lot more profitable than turning Move into Move32. So, it's better to
+            // use Move here because in cases where the register allocator cannot prove that
+            // everything is 32-bit, we still get coalescing.
             return Move;
         case Float:
+            // MoveFloat is always coalescable and we never convert MoveDouble to MoveFloat, so we
+            // should use MoveFloat when we know that the temporaries involved are 32-bit.
+            return MoveFloat;
         case Double:
             return MoveDouble;
         case Void:
@@ -1910,14 +1949,14 @@ private:
         }
 
         case FramePointer: {
-            append(Move, Tmp(GPRInfo::callFrameRegister), tmp(m_value));
+            ASSERT(tmp(m_value) == Tmp(GPRInfo::callFrameRegister));
             return;
         }
 
-        case B3::StackSlot: {
+        case SlotBase: {
             append(
                 Lea,
-                Arg::stack(m_stackToStack.get(m_value->as<StackSlotValue>())),
+                Arg::stack(m_stackToStack.get(m_value->as<SlotBaseValue>()->slot())),
                 tmp(m_value));
             return;
         }
@@ -2194,6 +2233,21 @@ private:
             return;
         }
 
+        case Set: {
+            Value* value = m_value->child(0);
+            append(
+                relaxedMoveForType(value->type()), immOrTmp(value),
+                m_variableToTmp.get(m_value->as<VariableValue>()->variable()));
+            return;
+        }
+
+        case Get: {
+            append(
+                relaxedMoveForType(m_value->type()),
+                m_variableToTmp.get(m_value->as<VariableValue>()->variable()), tmp(m_value));
+            return;
+        }
+
         case Branch: {
             m_insts.last().append(createBranch(m_value->child(0)));
             return;
@@ -2284,11 +2338,13 @@ private:
     IndexMap<Value, Tmp> m_valueToTmp; // These are values that must have a Tmp in Air. We say that a Value* with a non-null Tmp is "pinned".
     IndexMap<Value, Tmp> m_phiToTmp; // Each Phi gets its own Tmp.
     IndexMap<B3::BasicBlock, Air::BasicBlock*> m_blockToBlock;
-    HashMap<StackSlotValue*, Air::StackSlot*> m_stackToStack;
+    HashMap<B3::StackSlot*, Air::StackSlot*> m_stackToStack;
+    HashMap<Variable*, Tmp> m_variableToTmp;
 
     UseCounts m_useCounts;
     PhiChildren m_phiChildren;
     BlockWorklist m_fastWorklist;
+    Dominators& m_dominators;
 
     Vector<Vector<Inst, 4>> m_insts;
     Vector<Inst> m_prologue;

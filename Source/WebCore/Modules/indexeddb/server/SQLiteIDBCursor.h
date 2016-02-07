@@ -37,6 +37,7 @@
 namespace WebCore {
 
 class IDBCursorInfo;
+class IDBGetResult;
 
 namespace IDBServer {
 
@@ -51,6 +52,8 @@ public:
     SQLiteIDBCursor(SQLiteIDBTransaction&, const IDBCursorInfo&);
     SQLiteIDBCursor(SQLiteIDBTransaction&, uint64_t objectStoreID, uint64_t indexID, const IDBKeyRangeData&);
 
+    ~SQLiteIDBCursor();
+
     const IDBResourceIdentifier& identifier() const { return m_cursorIdentifier; }
     SQLiteIDBTransaction* transaction() const { return m_transaction; }
 
@@ -63,9 +66,12 @@ public:
     bool advance(uint64_t count);
     bool iterate(const IDBKeyData& targetKey);
 
+    bool didComplete() const { return m_completed; }
     bool didError() const { return m_errored; }
 
     void objectStoreRecordsChanged();
+
+    void currentData(IDBGetResult&);
 
 private:
     bool establishStatement();
@@ -94,7 +100,6 @@ private:
     IDBKeyData m_currentLowerKey;
     IDBKeyData m_currentUpperKey;
 
-    int64_t m_currentRecordID { -1 };
     IDBKeyData m_currentKey;
     IDBKeyData m_currentPrimaryKey;
     Vector<uint8_t> m_currentValueBuffer;
@@ -105,6 +110,8 @@ private:
 
     bool m_completed { false };
     bool m_errored { false };
+
+    bool m_backingStoreCursor { false };
 };
 
 

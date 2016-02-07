@@ -30,6 +30,7 @@
 #include "B3BasicBlockInlines.h"
 #include "B3CCallValue.h"
 #include "B3Compilation.h"
+#include "B3ComputeDivisionMagic.h"
 #include "B3Const32Value.h"
 #include "B3ConstPtrValue.h"
 #include "B3ControlValue.h"
@@ -37,7 +38,8 @@
 #include "B3MathExtras.h"
 #include "B3MemoryValue.h"
 #include "B3Procedure.h"
-#include "B3StackSlotValue.h"
+#include "B3SlotBaseValue.h"
+#include "B3StackSlot.h"
 #include "B3StackmapGenerationParams.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
@@ -4981,13 +4983,48 @@ void testFramePointer()
     CHECK(fp >= bitwise_cast<char*>(&proc) - 10000);
 }
 
+void testOverrideFramePointer()
+{
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+
+        // Add a stack slot to make the frame non trivial.
+        root->appendNew<SlotBaseValue>(proc, Origin(), proc.addStackSlot(8));
+
+        // Sub on x86 UseDef the source. If FP is not protected correctly, it will be overridden since it is the last visible use.
+        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* fp = root->appendNew<Value>(proc, FramePointer, Origin());
+        Value* result = root->appendNew<Value>(proc, Sub, Origin(), fp, offset);
+
+        root->appendNew<ControlValue>(proc, Return, Origin(), result);
+        CHECK(compileAndRun<int64_t>(proc, 1));
+    }
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+
+        root->appendNew<SlotBaseValue>(proc, Origin(), proc.addStackSlot(8));
+
+        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* fp = root->appendNew<Value>(proc, FramePointer, Origin());
+        Value* offsetFP = root->appendNew<Value>(proc, BitAnd, Origin(), offset, fp);
+        Value* arg = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* offsetArg = root->appendNew<Value>(proc, Add, Origin(), offset, arg);
+        Value* result = root->appendNew<Value>(proc, Add, Origin(), offsetArg, offsetFP);
+
+        root->appendNew<ControlValue>(proc, Return, Origin(), result);
+        CHECK(compileAndRun<int64_t>(proc, 1, 2));
+    }
+}
+
 void testStackSlot()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
     root->appendNew<ControlValue>(
         proc, Return, Origin(),
-        root->appendNew<StackSlotValue>(proc, Origin(), 1, StackSlotKind::Anonymous));
+        root->appendNew<SlotBaseValue>(proc, Origin(), proc.addStackSlot(1)));
 
     void* stackSlot = compileAndRun<void*>(proc);
     CHECK(stackSlot < &proc);
@@ -5015,8 +5052,8 @@ void testStoreLoadStackSlot(int value)
     Procedure proc;
     BasicBlock* root = proc.addBlock();
 
-    StackSlotValue* stack = root->appendNew<StackSlotValue>(
-        proc, Origin(), sizeof(int), StackSlotKind::Anonymous);
+    SlotBaseValue* stack =
+        root->appendNew<SlotBaseValue>(proc, Origin(), proc.addStackSlot(sizeof(int)));
 
     root->appendNew<MemoryValue>(
         proc, Store, Origin(),
@@ -7906,6 +7943,45 @@ void testCheckMulFoldFail(int a, int b)
     CHECK(invoke<int>(*code) == 42);
 }
 
+void testCheckMul64SShr()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* arg1 = root->appendNew<Value>(
+        proc, SShr, Origin(),
+        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+        root->appendNew<Const32Value>(proc, Origin(), 1));
+    Value* arg2 = root->appendNew<Value>(
+        proc, SShr, Origin(),
+        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1),
+        root->appendNew<Const32Value>(proc, Origin(), 1));
+    CheckValue* checkMul = root->appendNew<CheckValue>(proc, CheckMul, Origin(), arg1, arg2);
+    checkMul->append(arg1);
+    checkMul->append(arg2);
+    checkMul->setGenerator(
+        [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            CHECK(params.size() == 2);
+            CHECK(params[0].isGPR());
+            CHECK(params[1].isGPR());
+            jit.convertInt64ToDouble(params[0].gpr(), FPRInfo::fpRegT0);
+            jit.convertInt64ToDouble(params[1].gpr(), FPRInfo::fpRegT1);
+            jit.mulDouble(FPRInfo::fpRegT1, FPRInfo::fpRegT0);
+            jit.emitFunctionEpilogue();
+            jit.ret();
+        });
+    root->appendNew<ControlValue>(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, IToD, Origin(), checkMul));
+
+    auto code = compile(proc);
+
+    CHECK(invoke<double>(*code, 0ll, 42ll) == 0.0);
+    CHECK(invoke<double>(*code, 1ll, 42ll) == 0.0);
+    CHECK(invoke<double>(*code, 42ll, 42ll) == (42.0 / 2.0) * (42.0 / 2.0));
+    CHECK(invoke<double>(*code, 10000000000ll, 10000000000ll) == 25000000000000000000.0);
+}
+
 template<typename LeftFunctor, typename RightFunctor, typename InputType>
 void genericTestCompare(
     B3::Opcode opcode, const LeftFunctor& leftFunctor, const RightFunctor& rightFunctor,
@@ -9942,6 +10018,25 @@ void testSShrShl64(int64_t value, int32_t sshrAmount, int32_t shlAmount)
         == ((value << (shlAmount & 63)) >> (sshrAmount & 63)));
 }
 
+template<typename T>
+void testComputeDivisionMagic(T value, T magicMultiplier, unsigned shift)
+{
+    DivisionMagic<T> magic = computeDivisionMagic(value);
+    CHECK(magic.magicMultiplier == magicMultiplier);
+    CHECK(magic.shift == shift);
+}
+
+void testTrivialInfiniteLoop()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* loop = proc.addBlock();
+    root->appendNew<ControlValue>(proc, Jump, Origin(), FrequentedBlock(loop));
+    loop->appendNew<ControlValue>(proc, Jump, Origin(), FrequentedBlock(loop));
+
+    compile(proc);
+}
+
 // Make sure the compiler does not try to optimize anything out.
 NEVER_INLINE double zero()
 {
@@ -10716,6 +10811,7 @@ void run(const char* filter)
     RUN(testLoadAddrShift(2));
     RUN(testLoadAddrShift(3));
     RUN(testFramePointer());
+    RUN(testOverrideFramePointer());
     RUN(testStackSlot());
     RUN(testLoadFromFramePointer());
     RUN(testStoreLoadStackSlot(50));
@@ -11337,6 +11433,12 @@ void run(const char* filter)
     RUN(testSShrShl64(-420000000, 8, 8));
     RUN(testSShrShl64(42000000000, 8, 8));
     RUN(testSShrShl64(-42000000000, 8, 8));
+
+    RUN(testCheckMul64SShr());
+
+    RUN(testComputeDivisionMagic<int32_t>(2, -2147483647, 0));
+
+    RUN(testTrivialInfiniteLoop());
 
     if (tasks.isEmpty())
         usage();

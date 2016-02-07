@@ -79,7 +79,9 @@ NON_SVG_BINDING_IDLS = \
     $(WebCore)/Modules/encryptedmedia/MediaKeyNeededEvent.idl \
     $(WebCore)/Modules/encryptedmedia/MediaKeySession.idl \
     $(WebCore)/Modules/encryptedmedia/MediaKeys.idl \
+    $(WebCore)/Modules/fetch/FetchBody.idl \
     $(WebCore)/Modules/fetch/FetchHeaders.idl \
+    $(WebCore)/Modules/fetch/FetchRequest.idl \
     $(WebCore)/Modules/gamepad/Gamepad.idl \
     $(WebCore)/Modules/gamepad/GamepadButton.idl \
     $(WebCore)/Modules/gamepad/GamepadEvent.idl \
@@ -354,6 +356,7 @@ NON_SVG_BINDING_IDLS = \
     $(WebCore)/html/HTMLCanvasElement.idl \
     $(WebCore)/html/HTMLCollection.idl \
     $(WebCore)/html/HTMLDListElement.idl \
+    $(WebCore)/html/HTMLDataElement.idl \
     $(WebCore)/html/HTMLDataListElement.idl \
     $(WebCore)/html/HTMLDetailsElement.idl \
     $(WebCore)/html/HTMLDirectoryElement.idl \
@@ -762,6 +765,13 @@ ADDITIONAL_BINDING_IDLS += \
 endif
 endif # IOS
 
+vpath %.in $(WEBKITADDITIONS_HEADER_SEARCH_PATHS)
+
+ADDITIONAL_EVENT_NAMES =
+ADDITIONAL_EVENT_TARGET_FACTORY =
+
+-include WebCoreDerivedSourcesAdditions.make
+
 NON_SVG_BINDING_IDLS += $(ADDITIONAL_BINDING_IDLS)
 
 all : $(ADDITIONAL_BINDING_IDLS:%.idl=JS%.h)
@@ -1115,15 +1125,19 @@ XLinkNames.cpp : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/S
 
 # Register event constructors and targets
 
+EVENT_NAMES = EventNames.in $(ADDITIONAL_EVENT_NAMES)
+
 EventFactory.cpp EventHeaders.h EventInterfaces.h : EventFactory.intermediate
 .INTERMEDIATE : EventFactory.intermediate
-EventFactory.intermediate : dom/make_event_factory.pl dom/EventNames.in
-	$(PERL) -I $(WebCore)/bindings/scripts $< --input $(WebCore)/dom/EventNames.in
+EventFactory.intermediate : dom/make_event_factory.pl $(EVENT_NAMES)
+	$(PERL) -I $(WebCore)/bindings/scripts $< $(addprefix --input , $(filter-out $(WebCore)/dom/make_event_factory.pl, $^))
+
+EVENT_TARGET_FACTORY = EventTargetFactory.in $(ADDITIONAL_EVENT_TARGET_FACTORY)
 
 EventTargetHeaders.h EventTargetInterfaces.h : EventTargetFactory.intermediate
 .INTERMEDIATE : EventTargetFactory.intermediate
-EventTargetFactory.intermediate : dom/make_event_factory.pl dom/EventTargetFactory.in
-	$(PERL) -I $(WebCore)/bindings/scripts $< --input $(WebCore)/dom/EventTargetFactory.in
+EventTargetFactory.intermediate : dom/make_event_factory.pl $(EVENT_TARGET_FACTORY)
+	$(PERL) -I $(WebCore)/bindings/scripts $< $(addprefix --input , $(filter-out $(WebCore)/dom/make_event_factory.pl, $^))
 
 ExceptionCodeDescription.cpp ExceptionCodeDescription.h ExceptionHeaders.h ExceptionInterfaces.h : MakeDOMExceptions.intermediate
 .INTERMEDIATE : MakeDOMExceptions.intermediate
@@ -1205,7 +1219,7 @@ define NL
 endef
 
 $(SUPPLEMENTAL_MAKEFILE_DEPS) : $(PREPROCESS_IDLS_SCRIPTS) $(BINDING_IDLS) $(PLATFORM_FEATURE_DEFINES) DerivedSources.make
-	$(foreach f,$(BINDING_IDLS),echo $(f)>>$(IDL_FILES_TMP)$(NL))
+	$(foreach f,$(BINDING_IDLS),@echo $(f)>>$(IDL_FILES_TMP)$(NL))
 	$(call preprocess_idls_script, $(PREPROCESS_IDLS_SCRIPTS)) --defines "$(FEATURE_DEFINES) $(ADDITIONAL_IDL_DEFINES) LANGUAGE_JAVASCRIPT" --idlFilesList $(IDL_FILES_TMP) --supplementalDependencyFile $(SUPPLEMENTAL_DEPENDENCY_FILE) --windowConstructorsFile $(WINDOW_CONSTRUCTORS_FILE) --workerGlobalScopeConstructorsFile $(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --dedicatedWorkerGlobalScopeConstructorsFile $(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --supplementalMakefileDeps $@
 	$(DELETE) $(IDL_FILES_TMP)
 
@@ -1347,3 +1361,4 @@ WebCoreHeaderDetection.h : $(WebCore)/AVFoundationSupport.py DerivedSources.make
 	$(PYTHON) $(WebCore)/AVFoundationSupport.py $(WEBKIT_LIBRARIES) > $@
 
 endif # Windows_NT
+

@@ -375,7 +375,7 @@ WebPageProxy* WebInspectorProxy::platformCreateInspectorPage()
         preferences._pageVisibilityBasedProcessSuppressionEnabled = NO;
     }
 
-    [configuration setProcessPool: ::WebKit::wrapper(inspectorProcessPool())];
+    [configuration setProcessPool: ::WebKit::wrapper(inspectorProcessPool(inspectionLevel()))];
     [configuration _setGroupIdentifier:inspectorPageGroupIdentifier()];
 
     m_inspectorView = adoptNS([[WKWebInspectorWKWebView alloc] initWithFrame:initialRect configuration:configuration.get()]);
@@ -568,7 +568,7 @@ void WebInspectorProxy::platformSave(const String& suggestedURL, const String& c
 
         if (base64Encoded) {
             Vector<char> out;
-            if (!base64Decode(contentCopy, out, Base64FailOnInvalidCharacterOrExcessPadding))
+            if (!base64Decode(contentCopy, out, Base64ValidatePadding))
                 return;
             RetainPtr<NSData> dataContent = adoptNS([[NSData alloc] initWithBytes:out.data() length:out.size()]);
             [dataContent writeToURL:actualURL atomically:YES];

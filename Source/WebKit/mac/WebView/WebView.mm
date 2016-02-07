@@ -295,6 +295,10 @@
 #import <WebCore/WebMediaSessionManagerMac.h>
 #endif
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebViewIncludes.h>
+#endif
+
 #if PLATFORM(MAC)
 SOFT_LINK_CONSTANT_MAY_FAIL(Lookup, LUNotificationPopoverWillClose, NSString *)
 #endif
@@ -968,6 +972,11 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     pageConfiguration.chromeClient = new WebChromeClientIOS(self);
     pageConfiguration.inspectorClient = new WebInspectorClient(self);
 #endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebViewInitialization.mm>
+#endif
+
     pageConfiguration.editorClient = new WebEditorClient(self);
     pageConfiguration.alternativeTextClient = new WebAlternativeTextClient(self);
     pageConfiguration.loaderClientForMainFrame = new WebFrameLoaderClient;
@@ -1207,6 +1216,11 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #if ENABLE(DRAG_SUPPORT)
     pageConfiguration.dragClient = new WebDragClient(self);
 #endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebViewInitialization.mm>
+#endif
+
     pageConfiguration.editorClient = new WebEditorClient(self);
     pageConfiguration.inspectorClient = new WebInspectorClient(self);
     pageConfiguration.loaderClientForMainFrame = new WebFrameLoaderClient;
@@ -4436,6 +4450,24 @@ static Vector<String> toStringVector(NSArray* patterns)
         return 0;
 
     return page->pagination().gap;
+}
+
+- (void)_setPaginationLineGridEnabled:(BOOL)lineGridEnabled
+{
+    Page* page = core(self);
+    if (!page)
+        return;
+    
+    page->setPaginationLineGridEnabled(lineGridEnabled);
+}
+
+- (BOOL)_paginationLineGridEnabled
+{
+    Page* page = core(self);
+    if (!page)
+        return NO;
+    
+    return page->paginationLineGridEnabled();
 }
 
 - (NSUInteger)_pageCount

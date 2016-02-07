@@ -266,17 +266,17 @@ IDBError MemoryIDBBackingStore::deleteRange(const IDBResourceIdentifier& transac
     return IDBError();
 }
 
-IDBError MemoryIDBBackingStore::addRecord(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyData& keyData, const ThreadSafeDataBuffer& value)
+IDBError MemoryIDBBackingStore::addRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo& objectStoreInfo, const IDBKeyData& keyData, const ThreadSafeDataBuffer& value)
 {
     LOG(IndexedDB, "MemoryIDBBackingStore::addRecord");
 
-    ASSERT(objectStoreIdentifier);
+    ASSERT(objectStoreInfo.identifier());
 
     auto transaction = m_transactions.get(transactionIdentifier);
     if (!transaction)
         return IDBError(IDBDatabaseException::UnknownError, ASCIILiteral("No backing store transaction found to put record"));
 
-    MemoryObjectStore* objectStore = m_objectStoresByIdentifier.get(objectStoreIdentifier);
+    MemoryObjectStore* objectStore = m_objectStoresByIdentifier.get(objectStoreInfo.identifier());
     if (!objectStore)
         return IDBError(IDBDatabaseException::UnknownError, ASCIILiteral("No backing store object store found to put record"));
 
@@ -479,6 +479,12 @@ RefPtr<MemoryObjectStore> MemoryIDBBackingStore::takeObjectStoreByIdentifier(uin
     ASSERT_UNUSED(objectStore, objectStore);
 
     return objectStoreByIdentifier;
+}
+
+IDBObjectStoreInfo* MemoryIDBBackingStore::infoForObjectStore(uint64_t objectStoreIdentifier)
+{
+    ASSERT(m_databaseInfo);
+    return m_databaseInfo->infoForExistingObjectStore(objectStoreIdentifier);
 }
 
 void MemoryIDBBackingStore::deleteBackingStore()
