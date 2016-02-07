@@ -147,3 +147,8 @@ endif ()
 if (NOT APPLE)
     set(CMAKE_NINJA_FORCE_RESPONSE_FILE 1)
 endif ()
+
+# Allow users to toggle CMake SOVERSION. 
+# SOVERSION causes problems on Android.
+# SOVERSION can be annoying for bundling libraries with apps.
+option(ENABLE_SOVERSION "Enable soversion" ON)
