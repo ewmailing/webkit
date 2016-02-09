@@ -1,7 +1,7 @@
 list(APPEND WTF_SOURCES
-    nix/MainThreadNix.cpp
-    nix/RunLoopNix.cpp
-    nix/WorkQueueNix.cpp
+    none/MainThreadNone.cpp
+    none/RunLoopNone.cpp
+    none/WorkQueueNone.cpp
 )
 
 list(APPEND WTF_LIBRARIES

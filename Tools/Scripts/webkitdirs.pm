@@ -101,6 +101,7 @@ use constant {
     Efl      => "Efl",
     iOS      => "iOS",
     Mac      => "Mac",
+    Nix      => "Nix",
     WinCairo => "WinCairo",
     Unknown  => "Unknown"
 };
@@ -1051,6 +1052,7 @@ sub determinePortName()
     my %argToPortName = (
         efl => Efl,
         gtk => GTK,
+        nix => Nix,
         wincairo => WinCairo
     );
 
@@ -1081,6 +1083,7 @@ sub determinePortName()
             my $portsChoice = join "\n\t", qw(
                 --efl
                 --gtk
+                --nix
             );
             die "Please specify which WebKit port to build using one of the following options:"
                 . "\n\t$portsChoice\n";
@@ -1108,16 +1111,9 @@ sub isGtk()
     return portName() eq GTK;
 }
 
-sub determineIsNix()
-{
-    return if defined($isNix);
-    $isNix = checkForArgumentAndRemoveFromARGV("--nix");
-}
-
 sub isNix()
 {
-    determineIsNix();
-    return $isNix;
+    return portName() eq Nix;
 }
 
 # Determine if this is debian, ubuntu, linspire, or something similar.
@@ -1889,7 +1885,7 @@ sub isCachedArgumentfileOutOfDate($@)
 
 sub wrapperPrefixIfNeeded()
 {
-    if (isAnyWindows()) {
+    if (isAnyWindows() || isNix()) {
         return ();
     }
     if (isAppleMacWebKit()) {
