@@ -63,20 +63,18 @@ if (ICU_INCLUDE_DIR AND ICU_LIBRARY)
     endif ()
 
     find_library(
-		ICU_DATA_LIBRARY
+        ICU_DATA_LIBRARY
         NAMES icudata
-		HINTS ${PC_ICU_DATA_LIBRARY_DIRS}
-			${PC_ICU_DATA_LIBDIR}
+        HINTS ${PC_ICU_DATA_LIBRARY_DIRS}
+              ${PC_ICU_DATA_LIBDIR}
         DOC "Libraries to link against for ICU data")
-	mark_as_advanced(ICU_DATA_LIBRARY)
-	if (ICU_DATA_LIBRARY)
-		set(ICU_DATA_FOUND 1)
-		list(APPEND ICU_LIBRARIES ${ICU_DATA_LIBRARY})
+    mark_as_advanced(ICU_DATA_LIBRARY)
+    if (ICU_DATA_LIBRARY)
+        set(ICU_DATA_FOUND 1)
+        list(APPEND ICU_LIBRARIES ${ICU_DATA_LIBRARY})
     else ()
-		set(ICU_DATA_FOUND 0)
+        set(ICU_DATA_FOUND 0)
     endif ()
-
-
 else ()
     set(ICU_FOUND 0)
     set(ICU_I18N_FOUND 0)
